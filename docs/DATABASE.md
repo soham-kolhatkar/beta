@@ -184,8 +184,8 @@ Conceptual schema:
 users
 ────────────────────────────
 id                  UUID PK
-google_id           VARCHAR UNIQUE
 email               VARCHAR UNIQUE
+password_hash       VARCHAR
 name                VARCHAR
 profile_image_url   TEXT NULL
 role                USER_ROLE
@@ -193,6 +193,8 @@ is_active           BOOLEAN
 created_at          TIMESTAMP
 updated_at          TIMESTAMP
 ```
+
+`profile_image_url` is optional and not automatically populated (there is no OAuth provider supplying an avatar); it remains `NULL` unless a profile-photo feature is added later.
 
 ---
 
@@ -214,27 +216,19 @@ Fine-grained resource authorization must still be performed by FastAPI.
 
 ---
 
-# 8. Google Identity
+# 8. Password Storage
 
-`google_id` represents the stable Google identity associated with the application user.
-
-The system should not use the email address as the primary identity key.
-
-Email should be treated as an account attribute.
+`email` is the primary identity key used to look up a user at login (there is no external identity provider to supply a separate stable ID).
 
 Recommended constraint:
-
-```text
-UNIQUE(google_id)
-```
-
-and:
 
 ```text
 UNIQUE(email)
 ```
 
-The application should normalize emails where appropriate before enforcing uniqueness.
+The application should normalize emails (e.g. lowercase) before enforcing uniqueness and before lookup at login.
+
+`password_hash` must never store a plaintext password. Store only the output of a strong, salted password-hashing algorithm — **Argon2id** is the recommended default (OWASP's current first choice); bcrypt is an acceptable fallback if Argon2id is unavailable in a given environment. Verification must use the hashing library's own constant-time comparison, never a manual string comparison. See `docs/SECURITY.md` for the full authentication threat model.
 
 ---
 
@@ -956,7 +950,7 @@ ATTENDANCE_MANUALLY_ADJUSTED
 FACE_PROFILE_UPDATED
 ```
 
-Audit metadata should not contain raw face images, OAuth tokens, passwords, or unnecessary sensitive information.
+Audit metadata should not contain raw face images, session tokens, passwords or password hashes, or unnecessary sensitive information.
 
 ---
 
@@ -1065,7 +1059,6 @@ Likely indexes include:
 ### Users
 
 ```text
-google_id
 email
 ```
 
@@ -1306,9 +1299,7 @@ The database should avoid storing unnecessary sensitive information.
 
 Do not store:
 
-* Google access tokens
-* Google refresh tokens unless specifically required by the authentication architecture
-* Passwords
+* Plaintext passwords — store only a salted Argon2id hash (`users.password_hash`)
 * Raw camera images unless explicitly required
 * Continuous GPS history
 

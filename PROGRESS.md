@@ -5,6 +5,7 @@
 ## Status: Phase 0 complete — ready to start Phase 1
 
 ## Decisions locked in so far
+- **Authentication changed from Google OAuth to GeoAttend-managed email/password auth** (2026-08-28, requested after Phase 0, before Phase 1 started). No third-party identity provider. Password hashing: **Argon2id**. Session mechanism unchanged (HttpOnly cookies). No self-service signup in the MVP — accounts are provisioned via the Phase 2 seed script (email + role + initial password), since students/faculty need institution-assigned academic identity (PRN, employee ID, etc.) a signup form can't supply. All six `docs/` files plus `PLAN.md` updated accordingly; see `docs/PRODUCT.md` §4, `docs/SECURITY.md` §5–9/§62/§65, `docs/API.md` §5–6 for the current design.
 - Face recognition: self-hosted, open-source, via **DeepFace**. Exact backend model (ArcFace/Facenet512/etc.) not yet chosen — pending the Phase 3 evaluation spike. Not yet added as a dependency (deferred to Phase 3, per "don't add dependencies without justification").
 - Session mechanism: secure HttpOnly cookies (planned for Phase 1, not yet implemented).
 - Dev database: Docker Postgres using the `pgvector/pgvector:pg16` image (pgvector 0.8.5 confirmed available via `pg_available_extensions`, not yet `CREATE EXTENSION`'d — that's Phase 3).
@@ -34,11 +35,10 @@
 - [x] Global exception handler → `{error:{code,message}}` contract (`backend/app/core/errors.py`); request-id logging middleware (`backend/app/core/logging.py`), confirmed `X-Request-ID` header present on real responses.
 - [x] Dev CORS for `http://localhost:3000` — verified via a real preflight + credentialed GET from that origin.
 - [x] End-to-end connectivity proven: `frontend` (`src/queries/use-health.ts` + `src/app/page.tsx`) fetches `backend`'s `/health` through axios/TanStack Query; frontend build + lint clean; backend ruff lint + format clean.
-- [ ] Google OAuth credential provisioning — not started (needs a human with Google Cloud Console access; flagging for Phase 1 kickoff rather than blocking Phase 0 on it).
-- [ ] Arcjet account setup — not started (same reason; needed at the start of Phase 1 when `/auth/*` gets its first rate limiting).
+- [ ] Arcjet account setup — not started (needs a human to create the account/key; flagging for Phase 1 kickoff rather than blocking Phase 0 on it). Google OAuth credential provisioning is no longer needed — see the authentication decision above.
 
 ### Phase 1 — Authentication — NOT STARTED
-Blocked on: Google OAuth credentials and an Arcjet account/key (see checklist above) — obtain these first.
+Blocked on: an Arcjet account/key (see checklist above) — obtain this first. No longer blocked on Google OAuth credentials.
 ### Phase 2 — Academic data model + seed script — NOT STARTED
 ### Phase 3 — Face registration — NOT STARTED
 ### Phase 4 — Attendance sessions (faculty side) — NOT STARTED
@@ -60,7 +60,7 @@ Blocked on: Google OAuth credentials and an Arcjet account/key (see checklist ab
 ## What's next
 Phase 0 is done and verified end-to-end (see checklist above). Stopped here for review per the working process in `PLAN.md`.
 
-Before Phase 1 can start, two external accounts need human setup (not something an agent can do): a Google OAuth client ID/secret (Google Cloud Console) and an Arcjet account/key. Phase 1 implements Google OAuth end-to-end plus the role-provisioning strategy and applies Arcjet to `/auth/*`.
+Before Phase 1 can start, an Arcjet account/key needs human setup (not something an agent can do) — Google OAuth is no longer part of the design, so no Google Cloud Console setup is needed. Phase 1 now implements email/password authentication end-to-end (Argon2id hashing, `/auth/login`) plus the role-provisioning strategy, and applies Arcjet to `/auth/*`.
 
 ## How to run this locally
 - `docker compose up -d postgres` — starts Postgres (pgvector image) on port 5432.

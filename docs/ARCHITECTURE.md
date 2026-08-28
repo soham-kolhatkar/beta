@@ -618,7 +618,7 @@ Changes to API contracts should be documented.
 
 # 15. Authentication Architecture
 
-Google OAuth is used as the external identity provider.
+GeoAttend implements its own authentication rather than delegating identity to an external provider.
 
 Conceptual flow:
 
@@ -626,13 +626,13 @@ Conceptual flow:
 Browser
    │
    ▼
-Google OAuth
-   │
-   ▼
-Authenticated Google identity
+POST /auth/login (email + password)
    │
    ▼
 GeoAttend authentication layer
+   │
+   ▼
+Verify password hash
    │
    ▼
 GeoAttend user
@@ -641,14 +641,14 @@ GeoAttend user
 Application session
 ```
 
-Google establishes identity.
-
 GeoAttend establishes:
 
 * Application user
 * Role
 * Academic association
 * Permissions
+
+Because GeoAttend owns the entire authentication path, it is also responsible for protections a third-party identity provider would otherwise have absorbed: password hashing, brute-force/credential-stuffing protection on `/auth/login`, and account-enumeration resistance (see `docs/SECURITY.md`).
 
 ---
 
@@ -1087,7 +1087,8 @@ Logs must not unnecessarily expose:
 
 * Face images
 * Authentication secrets
-* OAuth tokens
+* Session tokens
+* Password hashes
 * Database credentials
 * Sensitive personal information
 
@@ -1362,7 +1363,7 @@ Not yet finalized:
 
 * Database schema
 * Exact API contracts
-* OAuth implementation
+* Exact password hashing parameters (Argon2id cost/memory/parallelism)
 * Face recognition model
 * Face embedding storage
 * UI design system

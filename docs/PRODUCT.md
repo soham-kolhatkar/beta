@@ -10,7 +10,7 @@ GeoAttend is a web-based attendance management system designed for educational i
 
 The system combines:
 
-* Google OAuth authentication
+* Email/password authentication
 * Academic/class management
 * Geolocation verification
 * Facial recognition
@@ -125,7 +125,7 @@ The system has three primary roles.
 
 Students use GeoAttend primarily to:
 
-* Authenticate with Google
+* Authenticate with email and password
 * Complete their profile
 * Register their face
 * View their classes
@@ -142,7 +142,7 @@ Students should have a **mobile-first experience**.
 
 Faculty use GeoAttend primarily to:
 
-* Authenticate with Google
+* Authenticate with email and password
 * Manage assigned classes
 * Create attendance sessions
 * Set attendance location
@@ -180,9 +180,9 @@ Admin functionality may initially be limited while the MVP focuses on Student an
 
 # 4. Authentication
 
-Google OAuth is the primary authentication mechanism.
+GeoAttend uses its own email/password authentication rather than a third-party identity provider.
 
-Users authenticate through Google rather than creating a separate application password.
+Users authenticate directly against GeoAttend's database with an email address and password. There is no external OAuth dependency, and the frontend never talks to a third-party identity service.
 
 Authentication establishes the user's identity.
 
@@ -191,19 +191,19 @@ Authorization is determined by GeoAttend's own database.
 Conceptually:
 
 ```text
-Google
-  ↓
-Authenticated identity
-  ↓
+Email + Password
+      ↓
+GeoAttend authentication layer
+      ↓
 GeoAttend user
-  ↓
+      ↓
 Role
   ├── STUDENT
   ├── FACULTY
   └── ADMIN
 ```
 
-The system must not assume that a Google account automatically has a particular application role.
+Accounts are provisioned by the institution (via an administrative/seed process), not through open self-registration, in the MVP. This keeps a user's role and academic identity (PRN, employee ID, branch, division, etc.) authoritative and administrator-controlled rather than client-supplied. The system must not assume that presenting valid credentials automatically grants a particular application role — role is always read from GeoAttend's own database, never from client input. See `docs/SECURITY.md` for password storage and brute-force protection requirements.
 
 ---
 
@@ -771,7 +771,7 @@ The client must never be trusted for:
 
 Security mechanisms include:
 
-* Google OAuth
+* Email/password authentication (Argon2id password hashing)
 * Backend authorization
 * Server-side location validation
 * Face verification
@@ -812,8 +812,8 @@ The first production-oriented MVP will include:
 
 ### Authentication
 
-* Google OAuth
-* User creation
+* Email/password authentication
+* User creation (provisioned via the seed/admin process, not self-registration)
 * Role-based access
 
 ### Academic structure

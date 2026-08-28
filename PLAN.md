@@ -4,14 +4,15 @@
 
 ## Context
 
-This repository starts from six detailed specification documents (`docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/UI.md`) describing **GeoAttend**: a web attendance system for schools combining Google OAuth, geolocation verification, and face-recognition verification, with Student/Faculty/Admin roles.
+This repository starts from six detailed specification documents (`docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/UI.md`) describing **GeoAttend**: a web attendance system for schools combining email/password authentication, geolocation verification, and face-recognition verification, with Student/Faculty/Admin roles.
 
 The docs are unusually implementation-ready — they already fix the stack, the full DB schema, the full REST API contract with a suggested endpoint build order (`docs/API.md` §69), and a UI build-priority order (`docs/UI.md` §63). Rather than implementing all of this in one continuous pass, the work is broken into phases that each ship something demoable (backend + frontend together), verify against explicit exit criteria, and record progress durably in `PROGRESS.md` — so a future session (or a fresh context window) can pick up exactly where things left off instead of re-deriving state from scratch.
 
-### Key decisions locked in before Phase 0
+### Key decisions locked in
 
 - **Face recognition**: self-hosted, open-source (not a managed cloud face API), to keep biometric data inside our own infrastructure and match the docs' privacy-by-design principle and "modular monolith" philosophy (`docs/ARCHITECTURE.md` §35–36). Library family: **DeepFace** (pip-installable, no dlib/cmake build pain, supports strong open embeddings like ArcFace/Facenet512, includes face detection and future anti-spoofing hooks for the post-MVP liveness phase). The *exact* backend model within it is decided by a short evaluation spike at the start of Phase 3 — this mirrors how `face_profiles.model_name`/`model_version` (`docs/DATABASE.md` §31) exist specifically to make that swap safe later.
 - **`AGENTS.md`**: all six docs reference this file as authoritative coding-agent guidance, but it didn't exist. It is created in Phase 0 from `docs/ARCHITECTURE.md` §37's 20 contributor rules.
+- **Authentication (decided after Phase 0, before Phase 1 started)**: switched from the docs' original Google OAuth design to GeoAttend-managed email/password authentication — no third-party identity provider. All six `docs/` files were updated accordingly (`docs/PRODUCT.md` §4, `docs/ARCHITECTURE.md` §15, `docs/DATABASE.md` §6/§8, `docs/API.md` §5–6, `docs/SECURITY.md` §5–9/§62/§65). Password hashing: **Argon2id**. Session mechanism is unaffected (still HttpOnly cookies — that decision was orthogonal to how identity gets established). No self-service signup in the MVP: accounts (email, role, initial password) are provisioned by the Phase 2 seed script, consistent with the existing "no admin UI yet" reasoning and with students/faculty needing institution-assigned academic identity (PRN, employee ID, etc.) that a signup form can't supply safely.
 
 ## Working process
 
@@ -31,16 +32,16 @@ The docs are unusually implementation-ready — they already fix the stack, the 
 - Test framework + DB fixture strategy (pytest + transactional rollback fixtures for backend, Vitest for frontend).
 - Global exception handler mapping to the `{error:{code,message}}` contract (`docs/API.md` §3.2/§52) and basic request-id logging middleware.
 - Dev-mode CORS allowing `http://localhost:3000`.
-- Start Google OAuth credential provisioning and Arcjet account setup now — both are external dependencies with possible approval delays.
+- Start Arcjet account setup now — an external dependency with possible approval delay. (Google OAuth credential provisioning is no longer needed — see the authentication decision above.)
 - **Exit criteria:** both dev servers run, hit each other, Postgres is reachable with the vector extension available, `AGENTS.md`/`PLAN.md`/`PROGRESS.md` committed.
 
 ### Phase 1 — Authentication
-- Google OAuth end-to-end; session mechanism: secure HttpOnly cookies (`docs/SECURITY.md` §8/§44).
-- `users` table + Alembic migration; `GET /auth/me`, `POST /auth/logout`.
-- Explicit role-provisioning strategy (a Google login must never imply a role per `docs/PRODUCT.md` §4/`docs/SECURITY.md` §13) — decided jointly with Phase 2's seed script (pre-seeded `users` rows keyed by email/`google_id`, since there's no admin UI yet to assign roles manually).
-- Arcjet applied to `/auth/*` now — its first real consumer.
-- Frontend: `/login`, route groups `(auth)`/`(student)`/`(faculty)`/`(admin)`, auth state via TanStack Query.
-- **Exit criteria:** a real Google login round-trip creates/loads a `users` row with the correct pre-seeded role and establishes a session; logout works; unauthenticated requests get 401.
+- Email/password authentication end-to-end (no third-party identity provider); session mechanism: secure HttpOnly cookies (`docs/SECURITY.md` §8/§44) — unaffected by the OAuth→raw-auth switch.
+- `users` table + Alembic migration (`email UNIQUE`, `password_hash`, no `google_id`); password hashing via **Argon2id**; `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` (`docs/API.md` §6).
+- Explicit role-provisioning strategy (valid credentials must never imply a role per `docs/PRODUCT.md` §4/`docs/SECURITY.md` §7) — decided jointly with Phase 2's seed script (pre-seeded `users` rows keyed by email, with role and initial password set by the seed process, since there's no admin UI yet and no self-registration in the MVP).
+- Arcjet applied to `/auth/*` now — its first real consumer; `/auth/login` specifically needs brute-force/credential-stuffing protection and account-enumeration-safe error responses, since an external identity provider is no longer absorbing that risk.
+- Frontend: `/login` (email/password form), route groups `(auth)`/`(student)`/`(faculty)`/`(admin)`, auth state via TanStack Query.
+- **Exit criteria:** a seeded user can log in with email + password, establishing a session; wrong password or unknown email both return the same generic `INVALID_CREDENTIALS` error; logout works; unauthenticated requests get 401.
 
 ### Phase 2 — Academic data model + seed script
 - Migrations for `institutions`, `academic_years`, `branches`, `divisions`, `subjects`, `students`, `faculty`, `classes`, `class_enrollments` per `docs/DATABASE.md` §9–19.
@@ -106,7 +107,7 @@ The docs are unusually implementation-ready — they already fix the stack, the 
 ## Sequencing risks (recorded so they aren't rediscovered)
 - Alembic + async SQLAlchemy commonly needs a sync-driver config for the migration runner even though the app uses `asyncpg` — handle in Phase 0.
 - `pgvector` needs both the Postgres extension *and* the `pgvector-python` client type adapter.
-- Google OAuth consent-screen and Arcjet account provisioning are external, potentially slow — start in Phase 0.
+- Arcjet account provisioning is an external dependency, potentially slow — start early.
 - Timestamp handling (UTC storage → local display) is cross-cutting frontend work from Phase 4 onward — pick the date library once, early.
 - `docs/DATABASE.md` and `docs/PRODUCT.md` disagree on whether `audit_logs` is MVP or post-MVP scope — Phase 7 resolves this by just building it.
 

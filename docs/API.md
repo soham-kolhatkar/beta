@@ -156,18 +156,16 @@ Rate limit exceeded.
 
 # 5. Authentication Architecture
 
-Google OAuth establishes the user's identity.
+GeoAttend establishes the user's identity itself, via email/password credentials — there is no external identity provider.
 
-The exact OAuth/session implementation may use a secure application-session mechanism.
-
-The frontend should not need to know Google's internal OAuth tokens.
+The exact session implementation uses a secure application-session mechanism (HttpOnly cookie).
 
 Conceptually:
 
 ```text
 Browser
    ↓
-Google
+POST /auth/login (email + password)
    ↓
 GeoAttend Auth
    ↓
@@ -179,6 +177,59 @@ FastAPI
 ---
 
 # 6. Authentication Endpoints
+
+## POST `/auth/login`
+
+Authenticates a user with email and password and establishes an application session (HttpOnly cookie).
+
+### Request
+
+```json
+{
+  "email": "student@example.com",
+  "password": "..."
+}
+```
+
+### Backend processing
+
+The backend:
+
+1. Normalizes the email and looks up the user.
+2. Verifies the password against the stored Argon2id hash using the hashing library's constant-time comparison.
+3. Returns the same generic failure for "no such user" and "wrong password" — the response must not reveal whether an email is registered.
+4. On success, establishes the session and returns the user profile (same shape as `GET /auth/me`).
+
+### Response
+
+```json
+{
+  "id": "uuid",
+  "email": "student@example.com",
+  "name": "Soham Kolhatkar",
+  "role": "STUDENT",
+  "profile_image_url": null
+}
+```
+
+### Failure response
+
+```text
+401 Unauthorized
+```
+
+```json
+{
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Incorrect email or password."
+  }
+}
+```
+
+This endpoint is rate-limited via Arcjet (`docs/SECURITY.md` §36–37) to resist brute-force and credential-stuffing attempts. There is no self-service registration endpoint in the MVP — accounts (including their initial password) are provisioned by the seed/admin process, not created through this API (`docs/PRODUCT.md` §4).
+
+---
 
 ## GET `/auth/me`
 
@@ -1502,6 +1553,7 @@ Initial error codes:
 
 ```text
 AUTH_REQUIRED
+INVALID_CREDENTIALS
 FORBIDDEN
 RESOURCE_NOT_FOUND
 
@@ -1891,6 +1943,7 @@ for security-sensitive workflow transitions.
 ```text
 AUTH
 ────────────────────────────────
+POST   /auth/login
 GET    /auth/me
 POST   /auth/logout
 
@@ -1965,6 +2018,7 @@ Implement APIs in this order:
 ## Phase 1 — Authentication
 
 ```text
+/auth/login
 /auth/me
 /auth/logout
 ```
@@ -2044,8 +2098,8 @@ The conceptual API contract is defined.
 
 Not yet finalized:
 
-* Exact OAuth callback routes
 * Exact session mechanism
+* Exact password hashing parameters (Argon2id cost/memory/parallelism)
 * Exact face upload format
 * Exact face model
 * Exact verification challenge implementation

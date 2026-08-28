@@ -7,7 +7,7 @@ This document defines the security architecture and security requirements for Ge
 GeoAttend handles several sensitive operations:
 
 * User identity
-* Google authentication
+* Password-based authentication
 * Student academic information
 * Faculty information
 * Attendance records
@@ -92,7 +92,7 @@ The backend must independently determine these values.
 
 # 5. Authentication
 
-Google OAuth is the primary authentication mechanism.
+GeoAttend implements email/password authentication directly rather than delegating identity to a third-party provider.
 
 Authentication answers:
 
@@ -106,7 +106,7 @@ These must remain separate.
 
 ---
 
-# 6. Google OAuth Flow
+# 6. Login Flow
 
 Conceptual flow:
 
@@ -114,16 +114,16 @@ Conceptual flow:
 Browser
    │
    ▼
-Google OAuth
-   │
-   ▼
-Google authenticates user
+POST /auth/login (email + password)
    │
    ▼
 GeoAttend authentication layer
    │
    ▼
-Find/create GeoAttend user
+Look up user by (normalized) email
+   │
+   ▼
+Verify password against stored Argon2id hash
    │
    ▼
 Application session
@@ -132,7 +132,9 @@ Application session
 FastAPI
 ```
 
-Google credentials must not be treated as the application's authorization model.
+If the email doesn't exist or the password is wrong, the backend must return the same generic `INVALID_CREDENTIALS` error either way — never reveal whether a given email is registered (account-enumeration protection).
+
+Valid credentials must not be treated as the application's authorization model — role and permissions are always read from GeoAttend's own database, never inferred from the fact that login succeeded.
 
 ---
 
@@ -143,7 +145,7 @@ The application maintains its own user record.
 Example:
 
 ```text id="2g8c9e"
-Google identity
+Email + password credentials
        ↓
 users
        ↓
@@ -152,7 +154,7 @@ role
 Student / Faculty / Admin
 ```
 
-A user's Google account does not automatically determine their role.
+Presenting valid credentials does not automatically determine role — role is a property of the stored `users` record, not something derived from the login mechanism.
 
 ---
 
@@ -175,11 +177,9 @@ The exact implementation will be finalized in `API.md`.
 
 Never log:
 
-* Google access tokens
-* Google refresh tokens
+* Passwords or password hashes
 * Application session tokens
 * Authorization headers
-* OAuth authorization codes
 
 Tokens must never be placed in:
 
@@ -946,10 +946,9 @@ Secrets must never be committed to Git.
 Sensitive values include:
 
 ```text id="2l5v0q"
-Google client secret
-OAuth credentials
 Database credentials
 JWT/session secrets
+Password-hashing configuration (if any application-level pepper is used)
 Arcjet credentials
 Deployment credentials
 ```
@@ -991,11 +990,10 @@ with placeholders only.
 
 Logs must not contain:
 
-* OAuth tokens
 * Session tokens
 * Face images
 * Face embeddings
-* Passwords
+* Passwords or password hashes
 * Authorization headers
 * Full sensitive request payloads
 
@@ -1281,19 +1279,19 @@ The exact workflow will be determined during implementation.
 
 # 62. Account Sharing
 
-Google authentication prevents many forms of simple account sharing, but face verification adds another identity factor.
+Because GeoAttend now owns authentication directly, email/password credentials are inherently easier to share, guess, or hand off than a third-party OAuth identity would have been — there is no external account with its own independent protections (device trust, provider-side anomaly detection, etc.) backing them. This means GeoAttend's actual anti-proxy guarantee rests more heavily on face verification than on the login mechanism itself.
 
 The expected model is:
 
 ```text id="q9e8y7"
-Google identity
+Email/password identity
         +
 Face identity
         ↓
 Student identity
 ```
 
-A student sharing their Google login should still fail face verification when another person attempts attendance.
+A student sharing their password should still fail face verification when another person attempts attendance. Password hashing (Argon2id) and login rate limiting reduce the risk of credential *compromise*, but they do not prevent deliberate credential *sharing* — that risk is mitigated by face verification, not by the authentication mechanism.
 
 ---
 
@@ -1343,12 +1341,12 @@ Protect authentication and verification endpoints from repeated attempts.
 Examples:
 
 ```text id="e6i7f8"
-Google OAuth abuse
+Login brute-force / credential stuffing
 Face verification abuse
 Attendance verification abuse
 ```
 
-Arcjet should provide the primary rate-limiting layer where applicable.
+`/auth/login` needs particular attention now that GeoAttend owns authentication directly: rate limit by both IP and target email, return identical generic errors for "no such user" and "wrong password," and consider a short backoff after repeated failures on the same account. Arcjet should provide the primary rate-limiting layer where applicable.
 
 ---
 
@@ -1404,7 +1402,8 @@ Security testing should include:
 
 ### Authentication
 
-* Invalid OAuth state
+* Invalid/incorrect credentials (must not reveal whether the email exists)
+* Brute-force / credential-stuffing attempts against `/auth/login`
 * Expired sessions
 * Session manipulation
 * Unauthorized access
@@ -1496,7 +1495,8 @@ Before production:
 ```text id="r4m6kz"
 [ ] HTTPS enabled
 [ ] Secure authentication cookies/tokens
-[ ] OAuth secrets protected
+[ ] Password hashing configured correctly (Argon2id, adequate cost parameters)
+[ ] Login endpoint rate-limited and account-enumeration-safe
 [ ] Database credentials protected
 [ ] CORS restricted
 [ ] Rate limiting enabled
@@ -1523,7 +1523,7 @@ GeoAttend should not rely on one security mechanism.
 The system should use defense in depth:
 
 ```text id="1l44cm"
-Google Identity
+Password Authentication
       +
 Application Authorization
       +
@@ -1554,7 +1554,8 @@ The security model is conceptually defined.
 
 Still to finalize:
 
-* Exact OAuth/session implementation
+* Exact session implementation
+* Exact Argon2id parameters (cost/memory/parallelism)
 * Exact Arcjet integration
 * Face model
 * Liveness mechanism
