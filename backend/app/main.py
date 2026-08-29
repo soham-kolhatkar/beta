@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.models  # noqa: F401 (registers all models with SQLAlchemy — see app/models/__init__.py)
-from app.api.routes import auth, faculty, health, students
+from app.api.routes import attendance, auth, faculty, health, students
 from app.core import face_model
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
@@ -36,3 +36,4 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(students.router, prefix="/api/v1")
 app.include_router(faculty.router, prefix="/api/v1")
+app.include_router(attendance.router, prefix="/api/v1")

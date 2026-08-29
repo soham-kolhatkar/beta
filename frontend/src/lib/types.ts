@@ -19,6 +19,48 @@ export interface FaceStatus {
   updated_at: string | null;
 }
 
+export type SessionStatus = "CREATED" | "ACTIVE" | "ENDED";
+
+export interface SubjectBrief {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface FacultyClass {
+  id: string;
+  name: string;
+  subject: SubjectBrief;
+  student_count: number;
+}
+
+export interface SessionDetail {
+  id: string;
+  class: { id: string; name: string };
+  subject: SubjectBrief;
+  faculty: { id: string; name: string };
+  starts_at: string;
+  ends_at: string;
+  status: SessionStatus;
+}
+
+export interface CreateSessionInput {
+  class_id: string;
+  starts_at: string;
+  ends_at: string;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+}
+
+export interface SessionCreateResult {
+  id: string;
+  class_id: string;
+  status: SessionStatus;
+  starts_at: string;
+  ends_at: string;
+}
+
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
     case "STUDENT":

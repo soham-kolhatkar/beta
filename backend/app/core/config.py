@@ -47,5 +47,12 @@ class Settings(BaseSettings):
     location_min_accuracy_meters: float = 0.0
     verification_context_ttl_seconds: int = 0
 
+    # Phase 4: attendance session radius bounds. Below the min, ordinary GPS
+    # accuracy (~5-20m on a phone) would cause false LOCATION_OUTSIDE_RADIUS
+    # rejections for legitimately-present students; above the max, the
+    # geofence stops meaningfully constraining who can mark attendance.
+    session_min_radius_meters: float = 10.0
+    session_max_radius_meters: float = 500.0
+
 
 settings = Settings()

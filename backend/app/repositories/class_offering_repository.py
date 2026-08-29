@@ -2,8 +2,24 @@ import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.class_offering import ClassOffering
+
+
+async def get_by_id(db: AsyncSession, class_id: uuid.UUID) -> ClassOffering | None:
+    result = await db.execute(select(ClassOffering).where(ClassOffering.id == class_id))
+    return result.scalar_one_or_none()
+
+
+async def list_for_faculty(db: AsyncSession, faculty_id: uuid.UUID) -> list[ClassOffering]:
+    result = await db.execute(
+        select(ClassOffering)
+        .where(ClassOffering.faculty_id == faculty_id)
+        .options(selectinload(ClassOffering.subject))
+        .order_by(ClassOffering.name)
+    )
+    return list(result.scalars().all())
 
 
 async def get_by_natural_key(

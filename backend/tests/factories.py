@@ -15,10 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.academic_year import AcademicYear
 from app.models.branch import Branch
+from app.models.class_enrollment import ClassEnrollment
+from app.models.class_offering import ClassOffering
 from app.models.division import Division
 from app.models.faculty import Faculty
 from app.models.institution import Institution
 from app.models.student import Student
+from app.models.subject import Subject
 from app.models.user import User, UserRole
 
 
@@ -104,3 +107,38 @@ async def create_faculty(
     db_session.add(faculty)
     await db_session.flush()
     return user, faculty
+
+
+async def create_class_offering(
+    db_session: AsyncSession,
+    institution: Institution,
+    faculty: Faculty,
+    division: Division,
+    academic_year: AcademicYear,
+    subject_code: str = "TST",
+    name: str = "Test Class",
+) -> ClassOffering:
+    subject = Subject(institution_id=institution.id, name="Test Subject", code=subject_code)
+    db_session.add(subject)
+    await db_session.flush()
+
+    class_offering = ClassOffering(
+        institution_id=institution.id,
+        subject_id=subject.id,
+        faculty_id=faculty.id,
+        division_id=division.id,
+        academic_year_id=academic_year.id,
+        name=name,
+    )
+    db_session.add(class_offering)
+    await db_session.flush()
+    return class_offering
+
+
+async def create_enrollment(
+    db_session: AsyncSession, class_offering: ClassOffering, student: Student
+) -> ClassEnrollment:
+    enrollment = ClassEnrollment(class_id=class_offering.id, student_id=student.id)
+    db_session.add(enrollment)
+    await db_session.flush()
+    return enrollment

@@ -627,10 +627,13 @@ starts_at           TIMESTAMP
 ends_at             TIMESTAMP
 
 status              SESSION_STATUS
+ended_at            TIMESTAMP (nullable)
 
 created_at          TIMESTAMP
 updated_at          TIMESTAMP
 ```
+
+`ended_at` is a Phase 4 implementation addition, not in the original spec: `POST /attendance/sessions/{id}/end`'s response (§22) returns it, so it needs to be a real column rather than derived. There is no background job transitioning an expired-but-not-explicitly-ended `ACTIVE` session to `ENDED`; code that needs to know whether a session can currently accept attendance checks `status == ACTIVE` *and* that `now` falls within `[starts_at, ends_at)`, not `status` alone.
 
 ---
 
