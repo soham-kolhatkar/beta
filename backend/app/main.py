@@ -1,14 +1,25 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import app.models  # noqa: F401 (registers all models with SQLAlchemy — see app/models/__init__.py)
 from app.api.routes import auth, faculty, health, students
+from app.core import face_model
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, register_request_logging
 
 configure_logging()
 
-app = FastAPI(title="GeoAttend API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    face_model.warm_up()
+    yield
+
+
+app = FastAPI(title="GeoAttend API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

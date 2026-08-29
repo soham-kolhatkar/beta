@@ -5,24 +5,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.models  # noqa: F401 (registers all models with SQLAlchemy — see app/models/__init__.py)
 from alembic import context
 from app.core.config import settings
 from app.core.database import Base
-
-# Import models here so Base.metadata is populated for autogenerate as they're added:
-from app.models import (  # noqa: F401
-    academic_year,
-    branch,
-    class_enrollment,
-    class_offering,
-    division,
-    faculty,
-    institution,
-    session,
-    student,
-    subject,
-    user,
-)
 
 config = context.config
 

@@ -1,0 +1,1 @@
+`face.jpg` is a resized copy of [DeepFace's own test fixture](https://github.com/serengil/deepface/blob/master/tests/unit/dataset/img2.jpg) (MIT licensed), used here only to exercise the face-registration pipeline in tests — a real detectable face, not a real person's personal photo submitted to this application.

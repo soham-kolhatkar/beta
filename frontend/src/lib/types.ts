@@ -8,6 +8,17 @@ export interface User {
   profile_image_url: string | null;
 }
 
+export interface FaceModelInfo {
+  name: string;
+  version: string;
+}
+
+export interface FaceStatus {
+  registered: boolean;
+  model: FaceModelInfo | null;
+  updated_at: string | null;
+}
+
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
     case "STUDENT":
