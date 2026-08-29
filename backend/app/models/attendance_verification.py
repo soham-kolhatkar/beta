@@ -29,9 +29,6 @@ class AttendanceVerification(Base):
     §27a. The audit-log table itself remains an optional, separate,
     not-yet-built concern (still "optional for MVP" per that section).
 
-    Face-step columns (`face_result`, `face_score`, ...) are deliberately
-    not added yet — Phase 5b adds those when it builds the face step,
-    rather than adding unused columns now.
     """
 
     __tablename__ = "attendance_verifications"
@@ -65,6 +62,10 @@ class AttendanceVerification(Base):
     )
     location_distance_meters: Mapped[float | None] = mapped_column(
         Numeric(8, 2, asdecimal=False), nullable=True
+    )
+
+    face_similarity: Mapped[float | None] = mapped_column(
+        Numeric(6, 4, asdecimal=False), nullable=True
     )
 
     failure_reason: Mapped[str | None] = mapped_column(String, nullable=True)

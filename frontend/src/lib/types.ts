@@ -87,6 +87,20 @@ export interface LocationVerifyResult {
   allowed_radius_meters?: number;
 }
 
+export interface FaceVerifyResult {
+  verified: boolean;
+  next_step?: string;
+  code?: string;
+  message?: string;
+  retryable?: boolean;
+}
+
+export interface CompleteAttendanceResult {
+  attendance_id: string;
+  status: "PRESENT";
+  marked_at: string;
+}
+
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
     case "STUDENT":

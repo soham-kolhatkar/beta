@@ -13,7 +13,7 @@ from app.repositories import face_profile_repository
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
-def _decode_image(content_type: str | None, raw: bytes) -> np.ndarray:
+def decode_image(content_type: str | None, raw: bytes) -> np.ndarray:
     if content_type not in _ALLOWED_CONTENT_TYPES:
         raise ApiError(
             "INVALID_REQUEST",
@@ -48,7 +48,7 @@ def _decode_image(content_type: str | None, raw: bytes) -> np.ndarray:
 async def register_face(
     db: AsyncSession, student: Student, content_type: str | None, raw: bytes
 ) -> FaceProfile:
-    image = _decode_image(content_type, raw)
+    image = decode_image(content_type, raw)
     embedding = face_model.extract_embedding(image)
 
     profile = await face_profile_repository.upsert(

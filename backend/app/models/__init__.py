@@ -10,6 +10,7 @@ that happen to import every model directly) never hits it.
 """
 
 from app.models.academic_year import AcademicYear  # noqa: F401
+from app.models.attendance import Attendance  # noqa: F401
 from app.models.attendance_session import AttendanceSession  # noqa: F401
 from app.models.attendance_verification import AttendanceVerification  # noqa: F401
 from app.models.branch import Branch  # noqa: F401

@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from deepface import DeepFace
 from deepface.modules.exceptions import FaceNotDetected
+from deepface.modules.verification import find_cosine_distance
 
 from app.core.config import settings
 from app.core.errors import ApiError
@@ -63,3 +64,11 @@ def extract_embedding(image: np.ndarray) -> list[float]:
         )
 
     return face["embedding"]
+
+
+def compare_embeddings(stored: list[float], live: list[float]) -> float:
+    """Cosine distance between a registered and a live embedding, via
+    DeepFace's own distance function so it stays consistent with whatever
+    formula `face_similarity_threshold` was calibrated against.
+    """
+    return float(find_cosine_distance(stored, live))

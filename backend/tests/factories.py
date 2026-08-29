@@ -146,14 +146,18 @@ async def create_enrollment(
     return enrollment
 
 
-async def create_face_profile(db_session: AsyncSession, student: Student) -> FaceProfile:
-    """A placeholder embedding — good enough for tests that only need "this
-    student has a registered face" as a precondition, without re-running
-    the real DeepFace pipeline (test_face.py already covers that).
+async def create_face_profile(
+    db_session: AsyncSession, student: Student, embedding: list[float] | None = None
+) -> FaceProfile:
+    """Defaults to a placeholder embedding — good enough for tests that only
+    need "this student has a registered face" as a precondition, without
+    re-running the real DeepFace pipeline (test_face.py already covers
+    that). Pass a real extracted embedding for tests that need a live face
+    submission to actually match (or deliberately not match) it.
     """
     profile = FaceProfile(
         student_id=student.id,
-        embedding=[0.0] * settings.face_embedding_dimension,
+        embedding=embedding if embedding is not None else [0.0] * settings.face_embedding_dimension,
         model_name="test-model",
         model_version="0",
     )
