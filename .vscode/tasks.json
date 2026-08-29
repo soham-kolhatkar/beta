@@ -1,0 +1,54 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "GeoAttend: Docker (Postgres)",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/start-docker.sh",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "geoattend",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GeoAttend: Backend",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/start-backend.sh",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "geoattend",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GeoAttend: Frontend",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/start-frontend.sh",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "geoattend",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GeoAttend: Start All",
+      "dependsOn": [
+        "GeoAttend: Docker (Postgres)",
+        "GeoAttend: Backend",
+        "GeoAttend: Frontend"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}

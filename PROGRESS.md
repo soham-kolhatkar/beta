@@ -2,7 +2,7 @@
 
 > Read this first when resuming work. It records what's actually built, what decisions are locked in, and what's next. `PLAN.md` has the full phase breakdown; `docs/` has the underlying specs.
 
-## Status: Phase 0 complete — ready to start Phase 1
+## Status: Phase 1 complete (verified in-browser by the user) — ready to start Phase 2
 
 ## Decisions locked in so far
 - **Authentication changed from Google OAuth to GeoAttend-managed email/password auth** (2026-08-28, requested after Phase 0, before Phase 1 started). No third-party identity provider. Password hashing: **Argon2id**. Session mechanism unchanged (HttpOnly cookies). No self-service signup in the MVP — accounts are provisioned via the Phase 2 seed script (email + role + initial password), since students/faculty need institution-assigned academic identity (PRN, employee ID, etc.) a signup form can't supply. All six `docs/` files plus `PLAN.md` updated accordingly; see `docs/PRODUCT.md` §4, `docs/SECURITY.md` §5–9/§62/§65, `docs/API.md` §5–6 for the current design.
@@ -37,8 +37,37 @@
 - [x] End-to-end connectivity proven: `frontend` (`src/queries/use-health.ts` + `src/app/page.tsx`) fetches `backend`'s `/health` through axios/TanStack Query; frontend build + lint clean; backend ruff lint + format clean.
 - [ ] Arcjet account setup — not started (needs a human to create the account/key; flagging for Phase 1 kickoff rather than blocking Phase 0 on it). Google OAuth credential provisioning is no longer needed — see the authentication decision above.
 
-### Phase 1 — Authentication — NOT STARTED
-Blocked on: an Arcjet account/key (see checklist above) — obtain this first. No longer blocked on Google OAuth credentials.
+### Phase 1 — Authentication — COMPLETE
+Arcjet explicitly skipped per instruction — `/auth/*` ships without rate limiting for now (tracked as a gap; revisit in Phase 7 or sooner).
+
+Backend:
+- [x] `app/models/user.py` — `User` model (`email` unique, `password_hash`, `name`, `profile_image_url` nullable, `role` as a `UserRole` enum → Postgres `user_role`, `is_active`, timestamps). No `google_id`.
+- [x] `app/models/session.py` — `UserSession` model backing the session cookie: stores only `token_hash` (sha256 of the raw token), never the raw token. Named `UserSession` (not `Session`) to avoid clashing with `sqlalchemy.orm.Session`.
+- [x] `app/core/security.py` — Argon2id password hashing (`argon2-cffi`, library defaults, not yet tuned) + session token generation/hashing helpers.
+- [x] `app/core/config.py` — `session_cookie_name`, `session_ttl_seconds` (7 days); no signing secret needed since session tokens are opaque and DB-verified, not JWTs.
+- [x] `app/schemas/auth.py`, `app/repositories/{user,session}_repository.py`, `app/services/auth_service.py` (`authenticate()` pays the Argon2 cost even for unknown emails via a dummy hash, so response timing doesn't leak account existence), `app/api/deps.py` (`get_current_user`), `app/api/routes/auth.py` (`POST /auth/login`, `GET /auth/me`, `POST /auth/logout`).
+- [x] Alembic migration `19ffe46df3cc` — `users` + `sessions` tables, applied.
+- [x] `backend/scripts/seed.py` — idempotent dev seed for 3 users (student/faculty/admin @example.com, password `password123`); Phase 2 will extend it with the full academic graph.
+- [x] Tests: `tests/test_auth.py` (integration, 6 tests — login success/wrong-password/unknown-email-parity/unauthenticated/logout/inactive-user, real Postgres via the transactional-rollback fixture) + `tests/test_security.py` (unit, 4 tests — hashing/token primitives, no DB). 12/12 passing. Test emails use a `test-`/`nobody@` prefix distinct from `scripts/seed.py`'s fixture data — there's one shared dev database, not a separate test DB, so this is what actually prevents collisions (deliberate simplification, not an oversight).
+- [x] Manually verified over real HTTP with cookies (not just the in-process test client): login sets the cookie, `/me` reads it, wrong password and unknown email return byte-identical `401 INVALID_CREDENTIALS`, logout clears the cookie and invalidates the session server-side.
+
+Frontend:
+- [x] `src/lib/types.ts` (`User`, `dashboardPathForRole`), `src/queries/use-current-user.ts` (treats 401 as "not logged in", not an error), `use-login.ts`, `use-logout.ts`.
+- [x] `src/app/(auth)/login/page.tsx` — email/password form.
+- [x] `src/components/require-role.tsx` — role guard, redirects to `/login` if unauthenticated or to the correct dashboard if the role doesn't match the section.
+- [x] Real (non-parenthesized) `student/`, `faculty/`, `admin/` route segments with a guarded `layout.tsx` + placeholder `dashboard/page.tsx` each — chosen over parenthesized route groups because `docs/UI.md` §62 specifies literal `/student/dashboard` etc. URLs, which route groups wouldn't produce.
+- [x] Root `page.tsx` now redirects by auth state instead of the Phase 0 health-check placeholder; the now-unused `use-health.ts` hook was deleted.
+- [x] Build + lint clean.
+- [x] **Manually verified in a real browser by the user**: unauthenticated `/` → `/login` redirect, login → correct dashboard, wrong password shows inline error, role guard redirects away from the wrong section, logout clears the session and going back requires logging in again.
+
+Docs synced to match what was actually built (session mechanism is no longer "TBD"):
+- [x] `docs/DATABASE.md` §8 renamed "Password Storage & Sessions", `sessions` table schema added, added to the §46 entity list.
+- [x] `docs/API.md` §71 / `docs/SECURITY.md` §74 / `docs/SECURITY.md` §8: removed "exact session mechanism" from open items, pointed at the concrete implementation.
+
+Dev tooling added (not part of the phase plan, but requested alongside it):
+- [x] Root-level `scripts/{start-docker,start-backend,start-frontend}.sh` — each resolves its own paths via `dirname "$0"` so they work regardless of invocation context; `start-backend.sh` polls `docker compose exec postgres pg_isready` before starting uvicorn (`--reload` now enabled) so it doesn't race Postgres startup.
+- [x] `.vscode/tasks.json` — "GeoAttend: Docker/Backend/Frontend" tasks each with `"panel": "dedicated"` (own persistent terminal, reused on rerun) + a "GeoAttend: Start All" compound task running all three in parallel. Verified by running all three scripts concurrently exactly as the tasks would.
+
 ### Phase 2 — Academic data model + seed script — NOT STARTED
 ### Phase 3 — Face registration — NOT STARTED
 ### Phase 4 — Attendance sessions (faculty side) — NOT STARTED
@@ -58,12 +87,15 @@ Blocked on: an Arcjet account/key (see checklist above) — obtain this first. N
 - Verified available in the dev environment: Node v22.23.1, npm 10.9.8, Python 3.10.12, `uv` 0.11.29, Docker 29.6.1 (daemon running), Docker Compose v5.3.1, git 2.34.1, psql 14.24.
 
 ## What's next
-Phase 0 is done and verified end-to-end (see checklist above). Stopped here for review per the working process in `PLAN.md`.
-
-Before Phase 1 can start, an Arcjet account/key needs human setup (not something an agent can do) — Google OAuth is no longer part of the design, so no Google Cloud Console setup is needed. Phase 1 now implements email/password authentication end-to-end (Argon2id hashing, `/auth/login`) plus the role-provisioning strategy, and applies Arcjet to `/auth/*`.
+Phase 1 is done and verified both by automated tests/manual HTTP checks and by the user in a real browser. Stopped here for review per the working process in `PLAN.md`. Next up is Phase 2 — academic data model (institutions/academic years/branches/divisions/subjects/students/faculty/classes/enrollments) and extending `scripts/seed.py` with the full academic graph, plus `GET /students/me` and `GET /faculty/me`.
 
 ## How to run this locally
-- `docker compose up -d postgres` — starts Postgres (pgvector image) on port 5432.
-- Backend: `cd backend && cp .env.example .env` (trim to just `ENVIRONMENT`/`DATABASE_URL`/`CORS_ALLOW_ORIGINS` for now — the rest are unset placeholders until later phases), then `uv run uvicorn app.main:app --port 8001`.
+**Preferred:** VS Code → Command Palette → "Tasks: Run Task" → **"GeoAttend: Start All"** (or run the three "GeoAttend: Docker/Backend/Frontend" tasks individually) — each opens its own dedicated terminal. Backed by `scripts/start-{docker,backend,frontend}.sh`; `start-backend.sh` waits for Postgres to be ready before starting uvicorn.
+
+Manual equivalent:
+- `docker compose up postgres` — starts Postgres (pgvector image) on port 5432.
+- Backend: `cd backend && cp .env.example .env` (trim to just `ENVIRONMENT`/`DATABASE_URL`/`CORS_ALLOW_ORIGINS` for now), then `uv run uvicorn app.main:app --port 8001 --reload`.
 - Frontend: `cd frontend && cp .env.example .env.local && npm run dev -- --port 3000`.
+- Seed dev users (idempotent): `cd backend && uv run python scripts/seed.py` — creates `student@example.com` / `faculty@example.com` / `admin@example.com`, all with password `password123`.
 - Backend tests: `cd backend && uv run pytest`. Lint: `uv run ruff check .` / `uv run ruff format .`.
+- Frontend build/lint: `cd frontend && npm run build` / `npm run lint`.

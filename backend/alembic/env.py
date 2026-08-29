@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.database import Base
 
 # Import models here so Base.metadata is populated for autogenerate as they're added:
-# from app.models import user  # noqa: F401
+from app.models import session, user  # noqa: F401
 
 config = context.config
 

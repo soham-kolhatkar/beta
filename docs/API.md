@@ -2098,8 +2098,7 @@ The conceptual API contract is defined.
 
 Not yet finalized:
 
-* Exact session mechanism
-* Exact password hashing parameters (Argon2id cost/memory/parallelism)
+* Exact password hashing parameters (Argon2id cost/memory/parallelism — currently library defaults)
 * Exact face upload format
 * Exact face model
 * Exact verification challenge implementation

@@ -169,7 +169,7 @@ The final session mechanism must:
 * Support logout/revocation
 * Avoid exposing sensitive credentials to client-side JavaScript unnecessarily
 
-The exact implementation will be finalized in `API.md`.
+Implementation: a server-side, DB-backed session (not a JWT) — see `docs/DATABASE.md` §8 "Sessions". Only a SHA-256 hash of the session token is stored, giving trivial logout/revocation.
 
 ---
 
@@ -1554,9 +1554,8 @@ The security model is conceptually defined.
 
 Still to finalize:
 
-* Exact session implementation
-* Exact Argon2id parameters (cost/memory/parallelism)
-* Exact Arcjet integration
+* Exact Argon2id parameters (cost/memory/parallelism — currently library defaults)
+* Exact Arcjet integration (currently skipped entirely — `/auth/*` has no rate limiting yet)
 * Face model
 * Liveness mechanism
 * Verification challenge mechanism

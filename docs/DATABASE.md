@@ -216,7 +216,7 @@ Fine-grained resource authorization must still be performed by FastAPI.
 
 ---
 
-# 8. Password Storage
+# 8. Password Storage & Sessions
 
 `email` is the primary identity key used to look up a user at login (there is no external identity provider to supply a separate stable ID).
 
@@ -229,6 +229,22 @@ UNIQUE(email)
 The application should normalize emails (e.g. lowercase) before enforcing uniqueness and before lookup at login.
 
 `password_hash` must never store a plaintext password. Store only the output of a strong, salted password-hashing algorithm — **Argon2id** is the recommended default (OWASP's current first choice); bcrypt is an acceptable fallback if Argon2id is unavailable in a given environment. Verification must use the hashing library's own constant-time comparison, never a manual string comparison. See `docs/SECURITY.md` for the full authentication threat model.
+
+## Sessions
+
+The session mechanism (previously left open as "not yet finalized") is a server-side, DB-backed session, not a JWT:
+
+```text
+sessions
+────────────────────────────
+id                  UUID PK
+user_id             UUID FK → users.id
+token_hash          VARCHAR UNIQUE
+expires_at          TIMESTAMP
+created_at          TIMESTAMP
+```
+
+The raw session token is a high-entropy random value (32 bytes, URL-safe) set as an `HttpOnly` cookie. Only its SHA-256 hash (`token_hash`) is stored — never the raw token — so a database leak doesn't hand out directly usable sessions, the same principle as password hashing. Logout deletes the row by `token_hash`; expiration is checked (and the row lazily deleted) on read. This gives trivial, immediate revocation without needing a JWT blocklist or an additional infrastructure dependency like Redis, consistent with the "modular monolith" principle in `docs/ARCHITECTURE.md` §35.
 
 ---
 
@@ -1313,6 +1329,7 @@ The expected initial database entities are:
 
 ```text
 users
+sessions
 institutions
 academic_years
 branches

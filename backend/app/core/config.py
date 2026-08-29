@@ -16,10 +16,11 @@ class Settings(BaseSettings):
 
     cors_allow_origins: list[str] = ["http://localhost:3000"]
 
-    # Phase 1+: Google OAuth / session settings (placeholders until implemented).
-    google_client_id: str = ""
-    google_client_secret: str = ""
-    session_secret: str = "dev-only-change-me"
+    # Phase 1: session cookie settings. The session token itself is a random
+    # opaque value verified against the `sessions` table (see core/security.py),
+    # so no signing secret is needed here.
+    session_cookie_name: str = "geoattend_session"
+    session_ttl_seconds: int = 60 * 60 * 24 * 7  # 7 days
 
     # Phase 7: Arcjet.
     arcjet_key: str = ""
