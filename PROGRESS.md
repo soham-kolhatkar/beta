@@ -2,7 +2,7 @@
 
 > Read this first when resuming work. It records what's actually built, what decisions are locked in, and what's next. `PLAN.md` has the full phase breakdown; `docs/` has the underlying specs.
 
-## Status: Phase 1 complete (verified in-browser by the user) — ready to start Phase 2
+## Status: Phase 2 complete — ready to start Phase 3
 
 ## Decisions locked in so far
 - **Authentication changed from Google OAuth to GeoAttend-managed email/password auth** (2026-08-28, requested after Phase 0, before Phase 1 started). No third-party identity provider. Password hashing: **Argon2id**. Session mechanism unchanged (HttpOnly cookies). No self-service signup in the MVP — accounts are provisioned via the Phase 2 seed script (email + role + initial password), since students/faculty need institution-assigned academic identity (PRN, employee ID, etc.) a signup form can't supply. All six `docs/` files plus `PLAN.md` updated accordingly; see `docs/PRODUCT.md` §4, `docs/SECURITY.md` §5–9/§62/§65, `docs/API.md` §5–6 for the current design.
@@ -68,7 +68,19 @@ Dev tooling added (not part of the phase plan, but requested alongside it):
 - [x] Root-level `scripts/{start-docker,start-backend,start-frontend}.sh` — each resolves its own paths via `dirname "$0"` so they work regardless of invocation context; `start-backend.sh` polls `docker compose exec postgres pg_isready` before starting uvicorn (`--reload` now enabled) so it doesn't race Postgres startup.
 - [x] `.vscode/tasks.json` — "GeoAttend: Docker/Backend/Frontend" tasks each with `"panel": "dedicated"` (own persistent terminal, reused on rerun) + a "GeoAttend: Start All" compound task running all three in parallel. Verified by running all three scripts concurrently exactly as the tasks would.
 
-### Phase 2 — Academic data model + seed script — NOT STARTED
+### Phase 2 — Academic data model + seed script — COMPLETE
+- [x] Models: `Institution`, `AcademicYear`, `Branch`, `Division`, `Subject`, `Student`, `Faculty`, `ClassEnrollment`, and `ClassOffering` (Python class name deliberately not `Class` — reads oddly next to the `class` keyword everywhere in the codebase; `__tablename__` stays `classes` to match every other doc/endpoint reference). Relationships used for eager loading are declared `lazy="raise"` so any accidental un-eager-loaded access fails loudly instead of silently attempting a lazy load (which breaks or N+1s under async SQLAlchemy).
+- [x] Migration `883034a9022d` — all 8 new tables with the FKs/unique constraints/indexes from `docs/DATABASE.md` §9–19 and its §38 indexing recommendations, applied.
+- [x] Repositories: one per entity, natural-key lookups for seed idempotency (`get_by_code`, `get_by_institution_and_code`, etc.) plus eager-loaded `get_by_user_id` for `Student`/`Faculty`.
+- [x] `app/services/{student,faculty}_service.py` — `get_my_profile()`, 404 `RESOURCE_NOT_FOUND` if the authenticated user has no matching profile (e.g., an admin hitting `/students/me`).
+- [x] `GET /students/me`, `GET /faculty/me` — response shapes match `docs/API.md` §10 exactly (nested `user`/`branch`/`division`/`academic_year` briefs).
+- [x] `scripts/seed.py` extended: 1 institution → 1 academic year → 1 branch → 1 division → 1 subject → student/faculty profiles for the Phase 1 seed users → 1 class → 1 enrollment. Verified idempotent (re-run produces zero duplicate rows).
+- [x] Tests: `tests/test_academic.py` (4 integration tests) — 16/16 total passing. Same test-email-prefix convention as Phase 1 to avoid colliding with `scripts/seed.py`'s fixture data (hit this exact collision again while writing these tests — a real footgun worth remembering, not just a one-off).
+- [x] Manually verified over real HTTP against the actual seeded data: `/students/me` and `/faculty/me` return the expected nested shape; a student hitting `/faculty/me` correctly gets 404, not data leakage or a 500.
+- [x] `docs/DATABASE.md` §9 updated: dropped `face_embedding_id` from the `students` schema (redundant with `face_profiles.student_id`, §28) — a deliberate simplification, not an oversight.
+
+Deliberately deferred (not in this phase's scope, don't be surprised they're missing): `/students/me/classes`, `/faculty/me/classes` (these are API.md's own "Phase 3 — Academic data" endpoints, distinct from this project's Phase 2; they'll land naturally once something needs them — likely Phase 4), any admin CRUD UI (seed script remains the substitute through at least Phase 7 per `PLAN.md`).
+
 ### Phase 3 — Face registration — NOT STARTED
 ### Phase 4 — Attendance sessions (faculty side) — NOT STARTED
 ### Phase 5a — Verification: location slice — NOT STARTED
@@ -87,7 +99,7 @@ Dev tooling added (not part of the phase plan, but requested alongside it):
 - Verified available in the dev environment: Node v22.23.1, npm 10.9.8, Python 3.10.12, `uv` 0.11.29, Docker 29.6.1 (daemon running), Docker Compose v5.3.1, git 2.34.1, psql 14.24.
 
 ## What's next
-Phase 1 is done and verified both by automated tests/manual HTTP checks and by the user in a real browser. Stopped here for review per the working process in `PLAN.md`. Next up is Phase 2 — academic data model (institutions/academic years/branches/divisions/subjects/students/faculty/classes/enrollments) and extending `scripts/seed.py` with the full academic graph, plus `GET /students/me` and `GET /faculty/me`.
+Phase 2 is done and verified (automated tests + manual HTTP checks against real seeded data). Stopped here for review per the working process in `PLAN.md`. Next up is Phase 3 — face registration: a DeepFace model-evaluation spike first (accuracy/speed/embedding dimension), then `face_profiles` table + pgvector, `POST/GET /students/me/face`, and the face-registration UI flow.
 
 ## How to run this locally
 **Preferred:** VS Code → Command Palette → "Tasks: Run Task" → **"GeoAttend: Start All"** (or run the three "GeoAttend: Docker/Backend/Frontend" tasks individually) — each opens its own dedicated terminal. Backed by `scripts/start-{docker,backend,frontend}.sh`; `start-backend.sh` waits for Postgres to be ready before starting uvicorn.

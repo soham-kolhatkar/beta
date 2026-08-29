@@ -265,10 +265,11 @@ branch_id           UUID FK
 division_id         UUID FK
 academic_year_id    UUID FK
 face_registered     BOOLEAN
-face_embedding_id   UUID NULL
 created_at          TIMESTAMP
 updated_at          TIMESTAMP
 ```
+
+`face_embedding_id` from earlier drafts of this schema is intentionally omitted: it would only duplicate the relationship `face_profiles.student_id` already provides (§28), one-directionally, with no query this table needs that the reverse lookup doesn't already serve. `face_registered` is populated starting in Phase 3.
 
 The student profile is separate from the generic user profile.
 

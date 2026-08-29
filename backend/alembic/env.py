@@ -10,7 +10,19 @@ from app.core.config import settings
 from app.core.database import Base
 
 # Import models here so Base.metadata is populated for autogenerate as they're added:
-from app.models import session, user  # noqa: F401
+from app.models import (  # noqa: F401
+    academic_year,
+    branch,
+    class_enrollment,
+    class_offering,
+    division,
+    faculty,
+    institution,
+    session,
+    student,
+    subject,
+    user,
+)
 
 config = context.config
 
