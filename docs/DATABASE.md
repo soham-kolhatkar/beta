@@ -801,7 +801,48 @@ Attempt
 Attendance
 ```
 
-This table is optional for the initial MVP but strongly recommended if anti-fraud requirements become significant.
+This table is optional for the initial MVP but strongly recommended if anti-fraud requirements become significant. It remains unbuilt — not needed to implement the verification flow below, and still deferred to whenever anti-fraud auditing becomes a real requirement.
+
+---
+
+# 27a. Verification Context (Phase 5a)
+
+`docs/API.md` §26-35 defines a verification-context state machine
+(`CREATED → LOCATION_VERIFIED → FACE_VERIFIED → COMPLETED/FAILED/EXPIRED`,
+with its own `expires_at`) that the table above doesn't model — that one is
+an audit log of *completed* attempts, not a mutable in-flight context. This
+is the table that backs `POST /attendance/sessions/{id}/verification` and
+the `/attendance/verifications/{id}/*` step endpoints:
+
+```text
+attendance_verifications
+────────────────────────────────────
+id                          UUID PK
+session_id                  UUID FK -> attendance_sessions.id
+student_id                  UUID FK -> students.id
+
+status                      VERIFICATION_STATUS
+expires_at                  TIMESTAMP
+
+location_latitude           NUMERIC (nullable)
+location_longitude          NUMERIC (nullable)
+location_accuracy_meters    NUMERIC (nullable)
+location_distance_meters    NUMERIC (nullable)
+
+failure_reason               VARCHAR (nullable)
+
+created_at                  TIMESTAMP
+updated_at                  TIMESTAMP
+```
+
+Face-step columns (result, similarity score, etc.) are deliberately not
+included yet — Phase 5b adds them when it builds that step, rather than
+adding unused columns now. A row is created once per `POST .../verification`
+call and updated in place as steps complete; resubmitting the location step
+(e.g. after `LOCATION_ACCURACY_TOO_LOW`) overwrites the same row rather than
+creating a new one — `attendance_verification_attempts` above is the
+separate, still-unbuilt place a per-attempt audit trail would eventually
+live.
 
 ---
 
@@ -1344,6 +1385,7 @@ faculty
 classes
 class_enrollments
 attendance_sessions
+attendance_verifications
 attendance
 face_profiles
 ```

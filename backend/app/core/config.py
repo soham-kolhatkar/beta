@@ -43,9 +43,18 @@ class Settings(BaseSettings):
     face_upload_max_bytes: int = 5 * 1024 * 1024
     face_min_image_dimension_px: int = 200
 
-    # Phase 5a: location + verification-context settings (tuned during that phase).
-    location_min_accuracy_meters: float = 0.0
-    verification_context_ttl_seconds: int = 0
+    # Phase 5a: location + verification-context settings.
+    # `accuracy_meters` (as reported by the browser Geolocation API) is a
+    # radius of uncertainty, not a floor — reject readings above this, per
+    # docs/SECURITY.md §21's "distance=30m, accuracy=±500m is unreliable"
+    # example. 50m tolerates weak/indoor signal while catching genuinely bad
+    # readings; not yet validated against real classroom conditions (same
+    # caveat as the face similarity threshold).
+    location_max_accuracy_meters: float = 50.0
+    # Short-lived on purpose (docs/API.md §35) — long enough to walk through
+    # location + face verification in one sitting, short enough to limit
+    # replay/reuse of a context.
+    verification_context_ttl_seconds: int = 120
 
     # Phase 4: attendance session radius bounds. Below the min, ordinary GPS
     # accuracy (~5-20m on a phone) would cause false LOCATION_OUTSIDE_RADIUS

@@ -12,12 +12,14 @@ from datetime import date
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models.academic_year import AcademicYear
 from app.models.branch import Branch
 from app.models.class_enrollment import ClassEnrollment
 from app.models.class_offering import ClassOffering
 from app.models.division import Division
+from app.models.face_profile import FaceProfile
 from app.models.faculty import Faculty
 from app.models.institution import Institution
 from app.models.student import Student
@@ -142,3 +144,19 @@ async def create_enrollment(
     db_session.add(enrollment)
     await db_session.flush()
     return enrollment
+
+
+async def create_face_profile(db_session: AsyncSession, student: Student) -> FaceProfile:
+    """A placeholder embedding — good enough for tests that only need "this
+    student has a registered face" as a precondition, without re-running
+    the real DeepFace pipeline (test_face.py already covers that).
+    """
+    profile = FaceProfile(
+        student_id=student.id,
+        embedding=[0.0] * settings.face_embedding_dimension,
+        model_name="test-model",
+        model_version="0",
+    )
+    db_session.add(profile)
+    await db_session.flush()
+    return profile

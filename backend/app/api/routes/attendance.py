@@ -16,7 +16,12 @@ from app.schemas.attendance import (
     SessionDetailResponse,
     SessionEndResponse,
 )
-from app.services import attendance_session_service, student_service
+from app.schemas.verification import (
+    LocationVerifyRequest,
+    LocationVerifyResponse,
+    StartVerificationResponse,
+)
+from app.services import attendance_session_service, student_service, verification_service
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
@@ -59,3 +64,29 @@ async def end_session(
     db: AsyncSession = Depends(get_db),
 ) -> AttendanceSession:
     return await attendance_session_service.end_session(db, faculty, session_id)
+
+
+@router.post("/sessions/{session_id}/verification", response_model=StartVerificationResponse)
+async def start_verification(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StartVerificationResponse:
+    student = await student_service.get_my_profile(db, current_user)
+    verification = await verification_service.start_verification(db, student, session_id)
+    return StartVerificationResponse.from_verification(verification)
+
+
+@router.post(
+    "/verifications/{verification_id}/location",
+    response_model=LocationVerifyResponse,
+    response_model_exclude_none=True,
+)
+async def submit_location_verification(
+    verification_id: uuid.UUID,
+    payload: LocationVerifyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LocationVerifyResponse:
+    student = await student_service.get_my_profile(db, current_user)
+    return await verification_service.submit_location(db, student, verification_id, payload)

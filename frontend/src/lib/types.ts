@@ -61,6 +61,32 @@ export interface SessionCreateResult {
   ends_at: string;
 }
 
+export interface ActiveSession {
+  id: string;
+  class: { id: string; name: string };
+  subject: SubjectBrief;
+  faculty: { name: string };
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface StartVerificationResult {
+  verification_id: string;
+  session_id: string;
+  expires_at: string;
+  steps: string[];
+}
+
+export interface LocationVerifyResult {
+  verified: boolean;
+  distance_meters: number;
+  accuracy_meters: number;
+  next_step?: string;
+  code?: string;
+  message?: string;
+  allowed_radius_meters?: number;
+}
+
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
     case "STUDENT":
