@@ -29,6 +29,10 @@ export default function FacultyDashboardPage() {
         </Link>
       </div>
 
+      <Link href="/faculty/sessions" className="text-sm underline">
+        View Session History
+      </Link>
+
       {dashboard && (
         <>
           <div className="flex gap-6">

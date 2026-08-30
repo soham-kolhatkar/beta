@@ -50,6 +50,10 @@ export default function StudentDashboardPage() {
             </p>
           </div>
 
+          <Link href="/student/history" className="text-sm underline">
+            View Full Attendance History
+          </Link>
+
           {dashboard.active_session && (
             <div className="flex flex-col gap-3">
               <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">

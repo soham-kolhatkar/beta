@@ -19,6 +19,8 @@ export function useSessionRoster(sessionId: string) {
       );
       return data;
     },
-    refetchInterval: POLL_INTERVAL_MS,
+    // Stop polling once the session has ended — its roster can't change anymore.
+    refetchInterval: (query) =>
+      query.state.data?.session.status === "ENDED" ? false : POLL_INTERVAL_MS,
   });
 }

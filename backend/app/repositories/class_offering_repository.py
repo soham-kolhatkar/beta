@@ -12,6 +12,15 @@ async def get_by_id(db: AsyncSession, class_id: uuid.UUID) -> ClassOffering | No
     return result.scalar_one_or_none()
 
 
+async def get_by_id_with_subject(db: AsyncSession, class_id: uuid.UUID) -> ClassOffering | None:
+    result = await db.execute(
+        select(ClassOffering)
+        .where(ClassOffering.id == class_id)
+        .options(selectinload(ClassOffering.subject))
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_for_faculty(db: AsyncSession, faculty_id: uuid.UUID) -> list[ClassOffering]:
     result = await db.execute(
         select(ClassOffering)

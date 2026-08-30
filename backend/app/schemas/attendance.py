@@ -115,9 +115,16 @@ RosterStatus = Literal["PRESENT", "NOT_MARKED", "VERIFICATION_ISSUE"]
 
 
 class RosterSessionBrief(BaseModel):
+    """`status` isn't in docs/API.md §24's example, but the frontend needs
+    it to tell an active session's roster (poll, show LIVE) apart from a
+    past one's (static, no LIVE badge) — same "small, deliberate addition"
+    precedent as `AttendanceSession.ended_at` in Phase 4.
+    """
+
     id: uuid.UUID
     class_name: str
     subject: str
+    status: SessionStatus
 
 
 class RosterSummary(BaseModel):

@@ -137,7 +137,7 @@ export interface RosterStudent {
 }
 
 export interface SessionRoster {
-  session: { id: string; class_name: string; subject: string };
+  session: { id: string; class_name: string; subject: string; status: SessionStatus };
   summary: {
     total_students: number;
     present: number;
@@ -145,6 +145,45 @@ export interface SessionRoster {
     verification_issues: number;
   };
   students: RosterStudent[];
+}
+
+export interface AttendanceHistoryItem {
+  id: string;
+  session_id: string;
+  subject: string;
+  marked_at: string;
+  status: "PRESENT";
+}
+
+export interface Pagination {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface AttendanceHistory {
+  items: AttendanceHistoryItem[];
+  pagination: Pagination;
+}
+
+export interface SubjectAttendanceSummary {
+  class_id: string;
+  subject: string;
+  percentage: number;
+  present: number;
+  total: number;
+}
+
+export interface AttendanceSummary {
+  overall: AttendanceOverview;
+  subjects: SubjectAttendanceSummary[];
+}
+
+export interface ClassAttendance {
+  class: { id: string; subject: string };
+  summary: AttendanceOverview;
+  records: AttendanceHistoryItem[];
 }
 
 export function dashboardPathForRole(role: UserRole): string {

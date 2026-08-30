@@ -206,6 +206,7 @@ async def get_session_roster(
             id=session.id,
             class_name=session.class_offering.name,
             subject=session.class_offering.subject.name,
+            status=session.status,
         ),
         summary=RosterSummary(
             total_students=len(students),

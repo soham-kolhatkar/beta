@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -114,6 +114,29 @@ async def list_for_faculty_between(
         .order_by(AttendanceSession.starts_at)
     )
     return list(result.scalars().all())
+
+
+async def count_ended_by_class_ids(
+    db: AsyncSession, class_ids: list[uuid.UUID], now: datetime
+) -> dict[uuid.UUID, int]:
+    """The per-subject denominator for a student's attendance summary
+    (docs/API.md §13) — same "ended, or past its own ends_at" definition of
+    a countable session as `attendance_repository.count_ended_sessions_
+    for_student`, just grouped by class instead of summed across all of
+    them.
+    """
+    if not class_ids:
+        return {}
+
+    result = await db.execute(
+        select(AttendanceSession.class_id, func.count())
+        .where(
+            AttendanceSession.class_id.in_(class_ids),
+            (AttendanceSession.status == SessionStatus.ENDED) | (AttendanceSession.ends_at <= now),
+        )
+        .group_by(AttendanceSession.class_id)
+    )
+    return dict(result.all())
 
 
 async def list_for_student_between(

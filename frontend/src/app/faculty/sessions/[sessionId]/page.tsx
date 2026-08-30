@@ -42,9 +42,13 @@ export default function SessionRosterPage() {
             <h1 className="text-xl font-semibold">
               {roster.session.subject} • {roster.session.class_name}
             </h1>
-            <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-              <span className="h-2 w-2 rounded-full bg-green-500" /> LIVE
-            </span>
+            {roster.session.status === "ACTIVE" ? (
+              <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                <span className="h-2 w-2 rounded-full bg-green-500" /> LIVE
+              </span>
+            ) : (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Ended</span>
+            )}
           </div>
 
           <p className="text-lg">

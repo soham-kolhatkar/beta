@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.class_enrollment import ClassEnrollment
+from app.models.class_offering import ClassOffering
 from app.models.student import Student
 
 
@@ -38,5 +39,16 @@ async def list_students_for_class(db: AsyncSession, class_id: uuid.UUID) -> list
         .where(ClassEnrollment.class_id == class_id)
         .options(selectinload(Student.user))
         .order_by(Student.roll_number)
+    )
+    return list(result.scalars().all())
+
+
+async def list_classes_for_student(db: AsyncSession, student_id: uuid.UUID) -> list[ClassOffering]:
+    result = await db.execute(
+        select(ClassOffering)
+        .join(ClassEnrollment, ClassEnrollment.class_id == ClassOffering.id)
+        .where(ClassEnrollment.student_id == student_id)
+        .options(selectinload(ClassOffering.subject))
+        .order_by(ClassOffering.name)
     )
     return list(result.scalars().all())
