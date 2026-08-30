@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
-import { activeFacultySessionsQueryKey } from "@/queries/use-active-faculty-sessions";
+import { facultyDashboardQueryKey } from "@/queries/use-faculty-dashboard";
 
 export function useEndSession() {
   const queryClient = useQueryClient();
@@ -10,7 +10,7 @@ export function useEndSession() {
       await apiClient.post(`/attendance/sessions/${sessionId}/end`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: activeFacultySessionsQueryKey });
+      queryClient.invalidateQueries({ queryKey: facultyDashboardQueryKey });
     },
   });
 }

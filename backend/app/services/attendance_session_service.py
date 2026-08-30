@@ -10,13 +10,22 @@ from app.models.faculty import Faculty
 from app.models.student import Student
 from app.models.user import User, UserRole
 from app.repositories import (
+    attendance_repository,
     attendance_session_repository,
+    attendance_verification_repository,
     class_enrollment_repository,
     class_offering_repository,
     faculty_repository,
     student_repository,
 )
-from app.schemas.attendance import SessionCreateRequest
+from app.schemas.attendance import (
+    RosterSessionBrief,
+    RosterStatus,
+    RosterStudentItem,
+    RosterSummary,
+    SessionCreateRequest,
+    SessionRosterResponse,
+)
 
 
 async def create_session(
@@ -142,3 +151,67 @@ async def list_sessions_for_faculty(
     db: AsyncSession, faculty: Faculty, status: SessionStatus | None
 ) -> list[AttendanceSession]:
     return await attendance_session_repository.list_for_faculty(db, faculty.id, status)
+
+
+async def get_session_roster(
+    db: AsyncSession, faculty: Faculty, session_id: uuid.UUID
+) -> SessionRosterResponse:
+    """docs/API.md §24. `students`/`attendance`/`verification-attempt` are
+    fetched as three separate queries and combined in Python rather than
+    one big join — the roster size is small (one division's worth of
+    students), so this keeps each query simple over saving a round trip.
+    """
+    session = await attendance_session_repository.get_by_id(db, session_id)
+    if session is None:
+        raise ApiError("SESSION_NOT_FOUND", "Session not found.", status_code=404)
+    if session.faculty_id != faculty.id:
+        raise ApiError("FORBIDDEN", "You are not authorized to view this session.", status_code=403)
+
+    students = await class_enrollment_repository.list_students_for_class(db, session.class_id)
+    attendance_by_student = {
+        row.student_id: row for row in await attendance_repository.list_by_session(db, session.id)
+    }
+    attempted_student_ids = await attendance_verification_repository.list_student_ids_with_attempts(
+        db, session.id
+    )
+
+    items: list[RosterStudentItem] = []
+    present = not_marked = verification_issues = 0
+
+    for student in students:
+        attendance = attendance_by_student.get(student.id)
+        status: RosterStatus
+        if attendance is not None:
+            status, marked_at = "PRESENT", attendance.marked_at
+            present += 1
+        elif student.id in attempted_student_ids:
+            status, marked_at = "VERIFICATION_ISSUE", None
+            verification_issues += 1
+        else:
+            status, marked_at = "NOT_MARKED", None
+            not_marked += 1
+
+        items.append(
+            RosterStudentItem(
+                student_id=student.id,
+                name=student.user.name,
+                prn=student.prn,
+                status=status,
+                marked_at=marked_at,
+            )
+        )
+
+    return SessionRosterResponse(
+        session=RosterSessionBrief(
+            id=session.id,
+            class_name=session.class_offering.name,
+            subject=session.class_offering.subject.name,
+        ),
+        summary=RosterSummary(
+            total_students=len(students),
+            present=present,
+            not_marked=not_marked,
+            verification_issues=verification_issues,
+        ),
+        students=items,
+    )

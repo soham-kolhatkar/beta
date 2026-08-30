@@ -98,3 +98,36 @@ async def list_for_faculty(
 
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def list_for_faculty_between(
+    db: AsyncSession, faculty_id: uuid.UUID, starts_after: datetime, starts_before: datetime
+) -> list[AttendanceSession]:
+    result = await db.execute(
+        select(AttendanceSession)
+        .where(
+            AttendanceSession.faculty_id == faculty_id,
+            AttendanceSession.starts_at >= starts_after,
+            AttendanceSession.starts_at < starts_before,
+        )
+        .options(*_EAGER_LOAD_OPTIONS)
+        .order_by(AttendanceSession.starts_at)
+    )
+    return list(result.scalars().all())
+
+
+async def list_for_student_between(
+    db: AsyncSession, student_id: uuid.UUID, starts_after: datetime, starts_before: datetime
+) -> list[AttendanceSession]:
+    result = await db.execute(
+        select(AttendanceSession)
+        .join(ClassEnrollment, ClassEnrollment.class_id == AttendanceSession.class_id)
+        .where(
+            ClassEnrollment.student_id == student_id,
+            AttendanceSession.starts_at >= starts_after,
+            AttendanceSession.starts_at < starts_before,
+        )
+        .options(*_EAGER_LOAD_OPTIONS)
+        .order_by(AttendanceSession.starts_at)
+    )
+    return list(result.scalars().all())

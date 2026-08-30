@@ -2,8 +2,10 @@ import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.class_enrollment import ClassEnrollment
+from app.models.student import Student
 
 
 async def get_by_class_and_student(
@@ -27,3 +29,14 @@ async def count_by_class_ids(db: AsyncSession, class_ids: list[uuid.UUID]) -> di
         .group_by(ClassEnrollment.class_id)
     )
     return dict(result.all())
+
+
+async def list_students_for_class(db: AsyncSession, class_id: uuid.UUID) -> list[Student]:
+    result = await db.execute(
+        select(Student)
+        .join(ClassEnrollment, ClassEnrollment.student_id == Student.id)
+        .where(ClassEnrollment.class_id == class_id)
+        .options(selectinload(Student.user))
+        .order_by(Student.roll_number)
+    )
+    return list(result.scalars().all())

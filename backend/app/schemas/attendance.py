@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -108,3 +109,44 @@ class ActiveSessionListResponse(BaseModel):
 
 class FacultySessionListResponse(BaseModel):
     items: list[SessionDetailResponse]
+
+
+RosterStatus = Literal["PRESENT", "NOT_MARKED", "VERIFICATION_ISSUE"]
+
+
+class RosterSessionBrief(BaseModel):
+    id: uuid.UUID
+    class_name: str
+    subject: str
+
+
+class RosterSummary(BaseModel):
+    total_students: int
+    present: int
+    not_marked: int
+    verification_issues: int
+
+
+class RosterStudentItem(BaseModel):
+    """`status` isn't a persisted column anywhere — it's computed per
+    roster request from whether an `Attendance` row exists (`PRESENT`) or
+    an `AttendanceVerification` attempt was ever started (`VERIFICATION_
+    ISSUE`, meaning tried and didn't finish) or neither (`NOT_MARKED`).
+    """
+
+    student_id: uuid.UUID
+    name: str
+    prn: str
+    status: RosterStatus
+    marked_at: datetime | None = None
+
+
+class SessionRosterResponse(BaseModel):
+    """docs/API.md §24. `class_name`/`subject` are flat strings here,
+    unlike `SessionDetailResponse`'s nested objects — matches the doc's own
+    example exactly rather than reusing that shape for consistency's sake.
+    """
+
+    session: RosterSessionBrief
+    summary: RosterSummary
+    students: list[RosterStudentItem]

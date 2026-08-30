@@ -15,6 +15,7 @@ from app.schemas.attendance import (
     SessionCreateResponse,
     SessionDetailResponse,
     SessionEndResponse,
+    SessionRosterResponse,
 )
 from app.schemas.verification import (
     CompleteAttendanceResponse,
@@ -57,6 +58,15 @@ async def get_session(
 ) -> SessionDetailResponse:
     session = await attendance_session_service.get_session_for_user(db, current_user, session_id)
     return SessionDetailResponse.from_session(session)
+
+
+@router.get("/sessions/{session_id}/attendance", response_model=SessionRosterResponse)
+async def get_session_roster(
+    session_id: uuid.UUID,
+    faculty: Faculty = Depends(get_current_faculty),
+    db: AsyncSession = Depends(get_db),
+) -> SessionRosterResponse:
+    return await attendance_session_service.get_session_roster(db, faculty, session_id)
 
 
 @router.post("/sessions/{session_id}/end", response_model=SessionEndResponse)

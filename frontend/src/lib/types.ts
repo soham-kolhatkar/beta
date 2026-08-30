@@ -101,6 +101,52 @@ export interface CompleteAttendanceResult {
   marked_at: string;
 }
 
+export interface AttendanceOverview {
+  percentage: number;
+  present: number;
+  total: number;
+}
+
+export interface StudentDashboard {
+  student: { name: string };
+  attendance: AttendanceOverview;
+  active_session: ActiveSession | null;
+  today_classes: ActiveSession[];
+}
+
+export interface TodaySummary {
+  classes: number;
+  active_sessions: number;
+  upcoming_sessions: number;
+}
+
+export interface FacultyDashboard {
+  today: TodaySummary;
+  active_session: SessionDetail | null;
+  upcoming_classes: SessionDetail[];
+}
+
+export type RosterStatus = "PRESENT" | "NOT_MARKED" | "VERIFICATION_ISSUE";
+
+export interface RosterStudent {
+  student_id: string;
+  name: string;
+  prn: string;
+  status: RosterStatus;
+  marked_at: string | null;
+}
+
+export interface SessionRoster {
+  session: { id: string; class_name: string; subject: string };
+  summary: {
+    total_students: number;
+    present: number;
+    not_marked: number;
+    verification_issues: number;
+  };
+  students: RosterStudent[];
+}
+
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
     case "STUDENT":

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { CreateSessionInput, SessionCreateResult } from "@/lib/types";
-import { activeFacultySessionsQueryKey } from "@/queries/use-active-faculty-sessions";
+import { facultyDashboardQueryKey } from "@/queries/use-faculty-dashboard";
 
 export function useCreateSession() {
   const queryClient = useQueryClient();
@@ -12,7 +12,7 @@ export function useCreateSession() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: activeFacultySessionsQueryKey });
+      queryClient.invalidateQueries({ queryKey: facultyDashboardQueryKey });
     },
   });
 }

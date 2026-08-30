@@ -8,6 +8,7 @@ from app.models.faculty import Faculty
 from app.models.user import User
 from app.schemas.academic import FacultyClassItem, FacultyClassListResponse, FacultyMeResponse
 from app.schemas.attendance import FacultySessionListResponse, SessionDetailResponse
+from app.schemas.dashboard import FacultyDashboardResponse
 from app.services import attendance_session_service, faculty_service
 
 router = APIRouter(prefix="/faculty", tags=["faculty"])
@@ -43,3 +44,10 @@ async def list_my_sessions(
     return FacultySessionListResponse(
         items=[SessionDetailResponse.from_session(s) for s in sessions]
     )
+
+
+@router.get("/me/dashboard", response_model=FacultyDashboardResponse)
+async def get_my_dashboard(
+    faculty: Faculty = Depends(get_current_faculty), db: AsyncSession = Depends(get_db)
+) -> FacultyDashboardResponse:
+    return await faculty_service.get_dashboard(db, faculty)

@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.models.student import Student
 from app.models.user import User
 from app.schemas.academic import StudentMeResponse
+from app.schemas.dashboard import StudentDashboardResponse
 from app.schemas.face import FaceModelInfo, FaceRegisterResponse, FaceStatusResponse
 from app.services import face_service, student_service
 
@@ -17,6 +18,14 @@ async def get_my_student_profile(
     current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> Student:
     return await student_service.get_my_profile(db, current_user)
+
+
+@router.get("/me/dashboard", response_model=StudentDashboardResponse)
+async def get_my_dashboard(
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> StudentDashboardResponse:
+    student = await student_service.get_my_profile(db, current_user)
+    return await student_service.get_dashboard(db, student)
 
 
 @router.post("/me/face", response_model=FaceRegisterResponse)
