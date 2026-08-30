@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_faculty, get_current_user
@@ -17,6 +17,8 @@ from app.schemas.attendance import (
     SessionEndResponse,
 )
 from app.schemas.verification import (
+    CompleteAttendanceResponse,
+    FaceVerifyResponse,
     LocationVerifyRequest,
     LocationVerifyResponse,
     StartVerificationResponse,
@@ -90,3 +92,31 @@ async def submit_location_verification(
 ) -> LocationVerifyResponse:
     student = await student_service.get_my_profile(db, current_user)
     return await verification_service.submit_location(db, student, verification_id, payload)
+
+
+@router.post(
+    "/verifications/{verification_id}/face",
+    response_model=FaceVerifyResponse,
+    response_model_exclude_none=True,
+)
+async def submit_face_verification(
+    verification_id: uuid.UUID,
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> FaceVerifyResponse:
+    student = await student_service.get_my_profile(db, current_user)
+    raw = await image.read()
+    return await verification_service.submit_face(
+        db, student, verification_id, image.content_type, raw
+    )
+
+
+@router.post("/verifications/{verification_id}/complete", response_model=CompleteAttendanceResponse)
+async def complete_verification(
+    verification_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CompleteAttendanceResponse:
+    student = await student_service.get_my_profile(db, current_user)
+    return await verification_service.complete_verification(db, student, verification_id)

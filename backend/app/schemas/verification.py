@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.models.attendance import Attendance, AttendanceStatus
 from app.models.attendance_verification import AttendanceVerification
 
 
@@ -41,3 +42,32 @@ class LocationVerifyResponse(BaseModel):
     code: str | None = None
     message: str | None = None
     allowed_radius_meters: float | None = None
+
+
+class FaceVerifyResponse(BaseModel):
+    """docs/API.md §30-31. Same shape convention as LocationVerifyResponse:
+    a 200 with `verified: false` for a face that was readable but didn't
+    match, not the app's `{"error": {...}}` envelope — that's reserved for
+    context-level problems (expired, wrong step, etc.), raised as ApiError
+    before this schema is even built.
+    """
+
+    verified: bool
+    next_step: str | None = None
+    code: str | None = None
+    message: str | None = None
+    retryable: bool | None = None
+
+
+class CompleteAttendanceResponse(BaseModel):
+    attendance_id: uuid.UUID
+    status: AttendanceStatus
+    marked_at: datetime
+
+    @classmethod
+    def from_attendance(cls, attendance: Attendance) -> "CompleteAttendanceResponse":
+        return cls(
+            attendance_id=attendance.id,
+            status=attendance.status,
+            marked_at=attendance.marked_at,
+        )
