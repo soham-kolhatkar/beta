@@ -13,6 +13,7 @@ from app.models.academic_year import AcademicYear  # noqa: F401
 from app.models.attendance import Attendance  # noqa: F401
 from app.models.attendance_session import AttendanceSession  # noqa: F401
 from app.models.attendance_verification import AttendanceVerification  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.branch import Branch  # noqa: F401
 from app.models.class_enrollment import ClassEnrollment  # noqa: F401
 from app.models.class_offering import ClassOffering  # noqa: F401

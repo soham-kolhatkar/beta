@@ -73,12 +73,12 @@ GeoAttend uses a decoupled frontend/backend architecture.
 
                     ▲
                     │
-             ┌──────┴──────┐
-             │   Arcjet    │
-             │             │
-             │ Rate Limit  │
-             │ Security    │
-             └─────────────┘
+             ┌───────────────┐
+             │     Redis     │
+             │               │
+             │ Rate Limiting │
+             │ Login Lockout │
+             └───────────────┘
 ```
 
 `*` Liveness detection is a post-MVP capability.
@@ -986,16 +986,16 @@ Database-level guarantee
 
 ---
 
-# 26. Arcjet Security Layer
+# 26. Rate Limiting Layer
 
-Arcjet is used for rate limiting and relevant application security controls.
+Arcjet (a third-party SaaS) was the original plan (see `PLAN.md`), but was dropped before Phase 7 implementation in favor of a self-hosted approach — no external dependency, no data leaving the app's own infrastructure, consistent with the same "self-hosted, open-source" philosophy already applied to the face-recognition stack (`ARCHITECTURE.md` §35–36). Rate limiting and the per-email login lockout are backed by Redis directly (see `backend/app/core/rate_limit.py`, `backend/app/services/auth_service.py`; `PROGRESS.md` has the full story, including why a fastapi-limiter dependency was tried and dropped).
 
 Conceptually:
 
 ```text
 Request
    ↓
-Arcjet security checks
+Redis-backed rate check (per IP, per endpoint group)
    ↓
 FastAPI endpoint
 ```
@@ -1003,14 +1003,12 @@ FastAPI endpoint
 High-cost and abuse-sensitive endpoints receive particular attention:
 
 ```text
-Authentication
+Authentication (also rate limited per target email, not just per IP)
 Face registration
 Face verification
 Attendance verification
 Attendance marking
 ```
-
-The exact Arcjet integration will follow the current official SDK/API documentation during implementation.
 
 ---
 
@@ -1314,8 +1312,8 @@ The initial system is therefore:
                 ▲
                 │
           ┌────────────┐
-          │  Arcjet    │
-          │  Security  │
+          │   Redis    │
+          │ Rate Limit │
           └────────────┘
 ```
 

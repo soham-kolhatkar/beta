@@ -22,9 +22,6 @@ class Settings(BaseSettings):
     session_cookie_name: str = "geoattend_session"
     session_ttl_seconds: int = 60 * 60 * 24 * 7  # 7 days
 
-    # Phase 7: Arcjet.
-    arcjet_key: str = ""
-
     # Phase 3/5b: face model + verification thresholds. Chosen via the
     # scripts/face_model_spike.py evaluation (see PROGRESS.md) — Facenet512
     # showed much cleaner same/different-person separation than ArcFace on
@@ -62,6 +59,30 @@ class Settings(BaseSettings):
     # geofence stops meaningfully constraining who can mark attendance.
     session_min_radius_meters: float = 10.0
     session_max_radius_meters: float = 500.0
+
+    # Phase 7: rate limiting, self-hosted via Redis + fastapi-limiter instead
+    # of Arcjet (see PROGRESS.md for that decision). Each pair below is a
+    # per-IP "N requests per window" limit on one docs/SECURITY.md §36
+    # high-risk endpoint group. `face_processing_*` is deliberately the
+    # strictest per-request group — DeepFace inference is the most
+    # computationally expensive thing this API does (§66).
+    redis_url: str = "redis://localhost:6379/0"
+    login_rate_limit_times: int = 20
+    login_rate_limit_seconds: int = 60
+    face_processing_rate_limit_times: int = 10
+    face_processing_rate_limit_seconds: int = 60
+    verification_rate_limit_times: int = 30
+    verification_rate_limit_seconds: int = 60
+
+    # Phase 7: per-email login lockout (docs/SECURITY.md §65's "rate limit by
+    # both IP and target email"), tracked directly against Redis rather than
+    # through fastapi-limiter — it's a narrower, failure-only counter (only
+    # failed attempts count, and a success resets it), which doesn't fit
+    # fastapi-limiter's per-request route model. Deliberately stricter than
+    # the IP ceiling above, since a real credential-stuffing attempt targets
+    # one account, not one IP.
+    auth_email_lockout_max_attempts: int = 5
+    auth_email_lockout_window_seconds: int = 60
 
 
 settings = Settings()

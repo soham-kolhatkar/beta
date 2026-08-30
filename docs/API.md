@@ -227,7 +227,7 @@ The backend:
 }
 ```
 
-This endpoint is rate-limited via Arcjet (`docs/SECURITY.md` §36–37) to resist brute-force and credential-stuffing attempts. There is no self-service registration endpoint in the MVP — accounts (including their initial password) are provisioned by the seed/admin process, not created through this API (`docs/PRODUCT.md` §4).
+This endpoint is rate-limited (Redis-backed, per IP and per target email — `docs/SECURITY.md` §36–37/§65, `PROGRESS.md` Phase 7) to resist brute-force and credential-stuffing attempts. There is no self-service registration endpoint in the MVP — accounts (including their initial password) are provisioned by the seed/admin process, not created through this API (`docs/PRODUCT.md` §4).
 
 ---
 
@@ -2102,7 +2102,6 @@ Not yet finalized:
 * Exact face upload format
 * Exact face model
 * Exact verification challenge implementation
-* Exact Arcjet configuration
 * Admin API depth
 * WebSocket/SSE decision
 * Export endpoints

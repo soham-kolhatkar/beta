@@ -781,7 +781,7 @@ Security mechanisms include:
 * Input validation
 * Secure environment variables
 
-Arcjet will be used for rate limiting and relevant security controls.
+Rate limiting and related security controls are self-hosted via Redis rather than a third-party service (Arcjet was the original plan — see `PROGRESS.md` Phase 7 for why it was dropped).
 
 ---
 
@@ -852,7 +852,7 @@ The first production-oriented MVP will include:
 * Duplicate attendance protection
 * Location validation
 * Face verification
-* Arcjet rate limiting
+* Rate limiting (Redis-backed)
 * Audit information
 
 ---

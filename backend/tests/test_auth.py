@@ -94,6 +94,27 @@ async def test_logout_invalidates_session(client: AsyncClient, db_session: Async
     assert (await client.get("/api/v1/auth/me")).status_code == 401
 
 
+async def test_login_ignores_a_smuggled_role_field(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """docs/SECURITY.md §69 item 7 ("cannot escalate role"): no endpoint in
+    this API accepts a `role` field as input anywhere (grepped every
+    request schema to confirm) — `role` only ever appears in output. This
+    is the structural mitigation; this test proves a client can't smuggle
+    one into the one write endpoint whose response shape happens to include
+    `role`, `/auth/login`, and have it do anything.
+    """
+    await _create_user(db_session)
+
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "test-student@example.com", "password": "password123", "role": "ADMIN"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "STUDENT"
+
+
 async def test_inactive_user_cannot_login(client: AsyncClient, db_session: AsyncSession) -> None:
     user = await _create_user(db_session)
     user.is_active = False

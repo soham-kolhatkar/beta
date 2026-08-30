@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_faculty, get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import face_processing_rate_limiter, verification_rate_limiter
 from app.models.attendance_session import AttendanceSession
 from app.models.faculty import Faculty
 from app.models.user import User
@@ -78,7 +79,11 @@ async def end_session(
     return await attendance_session_service.end_session(db, faculty, session_id)
 
 
-@router.post("/sessions/{session_id}/verification", response_model=StartVerificationResponse)
+@router.post(
+    "/sessions/{session_id}/verification",
+    response_model=StartVerificationResponse,
+    dependencies=[Depends(verification_rate_limiter)],
+)
 async def start_verification(
     session_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
@@ -93,6 +98,7 @@ async def start_verification(
     "/verifications/{verification_id}/location",
     response_model=LocationVerifyResponse,
     response_model_exclude_none=True,
+    dependencies=[Depends(verification_rate_limiter)],
 )
 async def submit_location_verification(
     verification_id: uuid.UUID,
@@ -108,6 +114,7 @@ async def submit_location_verification(
     "/verifications/{verification_id}/face",
     response_model=FaceVerifyResponse,
     response_model_exclude_none=True,
+    dependencies=[Depends(face_processing_rate_limiter)],
 )
 async def submit_face_verification(
     verification_id: uuid.UUID,
@@ -122,7 +129,11 @@ async def submit_face_verification(
     )
 
 
-@router.post("/verifications/{verification_id}/complete", response_model=CompleteAttendanceResponse)
+@router.post(
+    "/verifications/{verification_id}/complete",
+    response_model=CompleteAttendanceResponse,
+    dependencies=[Depends(verification_rate_limiter)],
+)
 async def complete_verification(
     verification_id: uuid.UUID,
     current_user: User = Depends(get_current_user),

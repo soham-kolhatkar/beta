@@ -984,9 +984,9 @@ Future versions may support multiple embeddings if required.
 
 # 33. Audit Logs
 
-Security-sensitive administrative actions should eventually be auditable.
+Built in Phase 7 (resolving the MVP-vs-post-MVP inconsistency between this section and `docs/PRODUCT.md` §25 — see `PROGRESS.md`). Security-sensitive administrative actions are auditable.
 
-Potential table:
+Table (built as specified below, exactly):
 
 ```text
 audit_logs
@@ -1388,13 +1388,13 @@ attendance_sessions
 attendance_verifications
 attendance
 face_profiles
+audit_logs
 ```
 
 Potential post-MVP entities:
 
 ```text
 attendance_verification_attempts
-audit_logs
 class_faculty
 timetables
 notifications

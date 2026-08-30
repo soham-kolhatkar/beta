@@ -13,6 +13,7 @@ from app.repositories import (
     attendance_repository,
     attendance_session_repository,
     attendance_verification_repository,
+    audit_log_repository,
     class_enrollment_repository,
     class_offering_repository,
     faculty_repository,
@@ -83,6 +84,14 @@ async def create_session(
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
     )
+    await audit_log_repository.create(
+        db,
+        user_id=faculty.user_id,
+        action="SESSION_CREATED",
+        entity_type="attendance_session",
+        entity_id=session.id,
+        details={"class_id": str(class_offering.id)},
+    )
     await db.commit()
     return session
 
@@ -100,9 +109,18 @@ async def end_session(
 
     # Idempotent: ending an already-ended session just returns its current
     # state rather than erroring (e.g. a double-click under a slow network).
+    # Only logged on the real transition — a repeated no-op end isn't a new
+    # security-relevant event.
     if session.status != SessionStatus.ENDED:
         session.status = SessionStatus.ENDED
         session.ended_at = datetime.now(timezone.utc)
+        await audit_log_repository.create(
+            db,
+            user_id=faculty.user_id,
+            action="SESSION_ENDED",
+            entity_type="attendance_session",
+            entity_id=session.id,
+        )
         await db.commit()
 
     return session

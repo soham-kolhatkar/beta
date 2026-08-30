@@ -13,12 +13,12 @@ verified so far — read that first if you're picking this project back up.
 
 ## Setup
 
-1. Clone the repo and start Postgres:
+1. Clone the repo and start Postgres + Redis (Redis backs rate limiting, Phase 7):
 
    ```bash
    git clone <this-repo-url>
    cd beta
-   docker compose up -d postgres
+   docker compose up -d postgres redis
    ```
 
 2. Backend (in its own terminal):

@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.errors import ApiError
 from app.models.face_profile import FaceProfile
 from app.models.student import Student
-from app.repositories import face_profile_repository
+from app.repositories import audit_log_repository, face_profile_repository
 
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
@@ -59,6 +59,13 @@ async def register_face(
         model_version=deepface.__version__,
     )
     student.face_registered = True
+    await audit_log_repository.create(
+        db,
+        user_id=student.user_id,
+        action="FACE_PROFILE_REGISTERED",
+        entity_type="face_profile",
+        entity_id=profile.id,
+    )
     await db.commit()
     return profile
 

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import face_processing_rate_limiter
 from app.models.attendance import AttendanceStatus
 from app.models.student import Student
 from app.models.user import User
@@ -79,7 +80,11 @@ async def get_my_class_attendance(
     return await student_service.get_class_attendance(db, student, class_id)
 
 
-@router.post("/me/face", response_model=FaceRegisterResponse)
+@router.post(
+    "/me/face",
+    response_model=FaceRegisterResponse,
+    dependencies=[Depends(face_processing_rate_limiter)],
+)
 async def register_my_face(
     image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),

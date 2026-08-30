@@ -764,7 +764,7 @@ All database timestamps should be stored in UTC.
 
 # 36. API Rate Limiting
 
-Arcjet will provide rate limiting/security controls.
+Rate limiting is implemented directly against Redis (`backend/app/core/rate_limit.py`), not Arcjet — see `PROGRESS.md`'s Phase 7 log for why (a third-party dependency was dropped in favor of a self-hosted approach, then a chosen library, `fastapi-limiter`, turned out to be broken against this project's FastAPI version and was replaced with a small hand-written limiter using the same fixed-window Redis pattern).
 
 High-risk endpoints:
 
@@ -913,13 +913,7 @@ for authenticated production APIs.
 
 # 43. CSRF
 
-The final CSRF strategy depends on the authentication/session mechanism.
-
-If authentication uses secure HTTP-only cookies, CSRF protections must be considered.
-
-If bearer tokens are used through a different architecture, the threat model changes.
-
-This will be finalized with the authentication implementation.
+Resolved by the chosen session mechanism (`docs/DATABASE.md` §8, `backend/app/api/routes/auth.py`): `SameSite=Lax` on the session cookie. Every state-changing endpoint in this API is a `POST` (never a state-changing `GET`, per `docs/API.md` §67's "model domain actions" convention) — browsers don't attach a `SameSite=Lax` cookie to a cross-site `POST`/`fetch`, so a malicious third-party page can't ride the session to perform an action. No separate CSRF token is issued; adding one would be redundant with this, not additive, given the endpoint shape above. This would need revisiting only if the app ever accepts state-changing `GET`s or moves to a `SameSite=None` cookie (e.g. a genuinely cross-origin frontend/backend split without `withCredentials` cookie scoping already handling it).
 
 ---
 
@@ -933,7 +927,7 @@ Secure
 SameSite
 ```
 
-Exact `SameSite` configuration depends on the deployment architecture.
+Implemented (`backend/app/api/routes/auth.py`): `HttpOnly` always; `Secure` when `ENVIRONMENT=production` (off in local dev over plain HTTP, since a browser drops a `Secure` cookie set over HTTP entirely); `SameSite=Lax` (see §43).
 
 Authentication cookies must not be readable by arbitrary frontend JavaScript.
 
@@ -947,9 +941,9 @@ Sensitive values include:
 
 ```text id="2l5v0q"
 Database credentials
+Redis connection string
 JWT/session secrets
 Password-hashing configuration (if any application-level pepper is used)
-Arcjet credentials
 Deployment credentials
 ```
 
@@ -1346,7 +1340,7 @@ Face verification abuse
 Attendance verification abuse
 ```
 
-`/auth/login` needs particular attention now that GeoAttend owns authentication directly: rate limit by both IP and target email, return identical generic errors for "no such user" and "wrong password," and consider a short backoff after repeated failures on the same account. Arcjet should provide the primary rate-limiting layer where applicable.
+`/auth/login` needs particular attention now that GeoAttend owns authentication directly: rate limit by both IP and target email, return identical generic errors for "no such user" and "wrong password," and consider a short backoff after repeated failures on the same account. Implemented in Phase 7: a per-IP Redis-backed limiter on the route itself, plus a separate per-email failure counter in `auth_service.authenticate()` (stricter than the IP ceiling, failure-only, reset on success) — see `PROGRESS.md`.
 
 ---
 
@@ -1555,15 +1549,13 @@ The security model is conceptually defined.
 Still to finalize:
 
 * Exact Argon2id parameters (cost/memory/parallelism — currently library defaults)
-* Exact Arcjet integration (currently skipped entirely — `/auth/*` has no rate limiting yet)
-* Face model
-* Liveness mechanism
-* Verification challenge mechanism
-* Location accuracy thresholds
+* Liveness mechanism (explicitly post-MVP)
+* Location/face thresholds are set (see `PROGRESS.md`) but not yet validated against real classroom conditions/volume, per §27
 * Biometric retention policy
-* Audit log schema
-* Production security headers
+* Full production security header set (CSP in particular — Phase 7 added the headers meaningful for a JSON API plus a frontend Permissions-Policy; a real CSP depends on final deployment specifics)
 * Deployment-specific security configuration
+
+Resolved since this was first written: face model (Facenet512, Phase 3), the verification-challenge mechanism (the `attendance_verifications` state machine, Phase 5a/5b), rate limiting and login lockout (Redis-backed, Phase 7 — see §36/§65), and the audit log (Phase 7, §33/§55).
 
 These decisions must be finalized before production deployment.
 
